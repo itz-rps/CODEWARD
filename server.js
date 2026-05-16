@@ -496,6 +496,9 @@ function generateTeachMode(overview, contents, languages, repoData) {
 
   return teachMode;
 }
+
+/**
+ * Fetch data from GitHub API
  */
 async function fetchGitHubAPI(url) {
   const response = await axios.get(url, {
