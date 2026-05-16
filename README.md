@@ -11,13 +11,13 @@ Codeward analyzes any GitHub repository and returns:
 - **Dangerous patterns** identified
 - **"Safe to ship" verdict** with actionable advice
 
-Powered by **IBM watsonx.ai**.
+Powered by **IBM Bob**.
 
 ## Tech Stack
 
 - **Frontend**: Pure HTML, CSS, JavaScript (no frameworks)
 - **Backend**: Node.js with Express
-- **AI**: IBM watsonx.ai (Granite model)
+- **AI**: IBM Bob (development partner)
 - **APIs**: GitHub REST API v3
 
 ## Project Structure
@@ -45,8 +45,6 @@ npm install
 Create a `.env` file in the root directory:
 
 ```env
-WATSONX_API_KEY=your_api_key_here
-WATSONX_PROJECT_ID=your_project_id_here
 PORT=3000
 ```
 
@@ -122,10 +120,10 @@ Health check endpoint.
 ## How It Works
 
 1. **User Input**: User pastes a GitHub repository URL
-2. **Backend Processing**: 
+2. **Backend Processing**:
    - Fetches repository data from GitHub API
    - Analyzes file structure and metadata
-   - Sends context to watsonx.ai for plain English summary
+   - Generates plain English summary
    - Calculates risk score based on multiple factors
 3. **Risk Analysis**: Checks for:
    - Documentation (README, LICENSE)
@@ -183,11 +181,7 @@ npm test
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `WATSONX_API_KEY` | IBM watsonx.ai API key | Yes* |
-| `WATSONX_PROJECT_ID` | IBM watsonx.ai project ID | Yes* |
 | `PORT` | Server port (default: 3000) | No |
-
-*Note: If watsonx credentials are not provided, the system will use a fallback rule-based summary generator.
 
 ## Deployment
 
@@ -225,11 +219,10 @@ MIT
 
 - [Express](https://expressjs.com/) - Web framework
 - [Axios](https://axios-http.com/) - HTTP client
-- [IBM watsonx.ai](https://www.ibm.com/watsonx) - AI model
 - [GitHub API](https://docs.github.com/en/rest) - Repository data
 
 ## Acknowledgments
 
 Built at **IBM Bob Hackathon 2026**
 
-Powered by **IBM Bob** and **IBM watsonx.ai**
+Powered by **IBM Bob**
