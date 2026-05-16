@@ -82,8 +82,12 @@ app.post('/api/analyze', async (req, res) => {
     console.log('Generating AI summary...');
     const summary = await generateAISummary(overview, languagesData, fileList);
     
+    // Run online vulnerability checks
+    console.log('Running online vulnerability checks...');
+    const vulnerabilities = await checkVulnerabilities(owner, repo, contentsData, languagesData);
+    
     // Calculate risk score
-    const riskAnalysis = calculateRiskScore(overview, contentsData, repoData);
+    const riskAnalysis = calculateRiskScore(overview, contentsData, repoData, vulnerabilities);
     
     // Determine verdict
     const verdict = determineVerdict(riskAnalysis.score);
@@ -94,6 +98,9 @@ app.post('/api/analyze', async (req, res) => {
     // Get score explanation
     const scoreExplanation = getScoreExplanation(riskAnalysis.score);
     
+    // Generate teach mode content
+    const teachMode = generateTeachMode(overview, contentsData, languagesData, repoData);
+    
     // Build response
     const analysis = {
       overview,
@@ -102,6 +109,8 @@ app.post('/api/analyze', async (req, res) => {
       scoreExplanation,
       redFlags: riskAnalysis.flags,
       fixRecommendations,
+      vulnerabilities,
+      teachMode,
       verdict: verdict.label,
       verdictAdvice: verdict.advice
     };
@@ -138,6 +147,355 @@ app.post('/api/analyze', async (req, res) => {
 
 /**
  * Fetch data from GitHub API
+
+/**
+ * Check for online vulnerabilities
+ */
+async function checkVulnerabilities(owner, repo, contents, languages) {
+  const vulnerabilities = {
+    npm: [],
+    pypi: [],
+    advisories: [],
+    sensitiveFiles: []
+  };
+
+  try {
+    // Check for sensitive files in repo tree
+    console.log('Checking for sensitive files...');
+    const treeData = await fetchGitHubAPI(`https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`);
+    vulnerabilities.sensitiveFiles = checkSensitiveFiles(treeData.tree || []);
+
+    // Check NPM vulnerabilities if package.json exists
+    const hasPackageJson = Array.isArray(contents) && contents.some(item => item.name === 'package.json');
+    if (hasPackageJson) {
+      console.log('Checking NPM vulnerabilities...');
+      vulnerabilities.npm = await checkNPMVulnerabilities(owner, repo);
+    }
+
+    // Check PyPI vulnerabilities if requirements.txt exists
+    const hasRequirements = Array.isArray(contents) && contents.some(item => item.name === 'requirements.txt');
+    if (hasRequirements) {
+      console.log('Checking PyPI vulnerabilities...');
+      vulnerabilities.pypi = await checkPyPIVulnerabilities(owner, repo);
+    }
+
+    // Check GitHub advisories for detected languages
+    console.log('Checking GitHub advisories...');
+    vulnerabilities.advisories = await checkGitHubAdvisories(languages);
+
+  } catch (error) {
+    console.error('Vulnerability check error:', error.message);
+    // Don't fail the entire analysis if vulnerability checks fail
+  }
+
+  return vulnerabilities;
+}
+
+/**
+ * Check for sensitive files in repository
+ */
+function checkSensitiveFiles(tree) {
+  const sensitivePatterns = [
+    '.env', '.env.local', '.env.production', '.env.development',
+    'id_rsa', 'id_rsa.pub', '.pem', '.key', '.p12', '.pfx',
+    'secrets.json', 'credentials.json', 'config.prod.js', 'config.production.js',
+    'admin-password', 'backup.sql', 'database.sql', 'dump.sql',
+    '.htpasswd', 'shadow', 'passwd', 'private-key',
+    'aws-credentials', '.aws/credentials', 'gcp-key.json'
+  ];
+
+  const found = [];
+  
+  tree.forEach(item => {
+    const path = item.path.toLowerCase();
+    const filename = path.split('/').pop();
+    
+    sensitivePatterns.forEach(pattern => {
+      if (filename.includes(pattern.toLowerCase()) || path.includes(pattern.toLowerCase())) {
+        found.push({
+          file: item.path,
+          severity: 'critical',
+          message: `Exposed sensitive file: ${item.path}`
+        });
+      }
+    });
+  });
+
+  return found;
+}
+
+/**
+ * Check NPM package vulnerabilities
+ */
+async function checkNPMVulnerabilities(owner, repo) {
+  const vulnerabilities = [];
+  
+  try {
+    // Fetch package.json
+    const packageJsonData = await fetchGitHubAPI(`https://api.github.com/repos/${owner}/${repo}/contents/package.json`);
+    const packageJson = JSON.parse(Buffer.from(packageJsonData.content, 'base64').toString());
+    
+    const riskyPackages = ['eval', 'vm2', 'node-serialize', 'serialize-javascript', 'node-uuid', 'request'];
+    const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
+    
+    // Check for risky packages
+    for (const [pkg, version] of Object.entries(dependencies || {})) {
+      if (riskyPackages.includes(pkg)) {
+        vulnerabilities.push({
+          package: pkg,
+          severity: 'critical',
+          message: `Risky package detected: ${pkg} (known security issues)`
+        });
+      }
+      
+      // Check if package is outdated (sample check for major packages)
+      if (['express', 'react', 'vue', 'angular'].includes(pkg)) {
+        try {
+          const npmData = await axios.get(`https://registry.npmjs.org/${pkg}/latest`, { timeout: 3000 });
+          const latestVersion = npmData.data.version;
+          const currentMajor = parseInt(version.replace(/[^0-9]/g, '').charAt(0));
+          const latestMajor = parseInt(latestVersion.split('.')[0]);
+          
+          if (latestMajor - currentMajor >= 2) {
+            vulnerabilities.push({
+              package: pkg,
+              severity: 'warning',
+              message: `${pkg} is ${latestMajor - currentMajor} major versions behind (current: ${version}, latest: ${latestVersion})`
+            });
+          }
+        } catch (err) {
+          // Skip if NPM registry check fails
+        }
+      }
+    }
+  } catch (error) {
+    console.error('NPM check error:', error.message);
+  }
+  
+  return vulnerabilities;
+}
+
+/**
+ * Check PyPI package vulnerabilities
+ */
+async function checkPyPIVulnerabilities(owner, repo) {
+  const vulnerabilities = [];
+  
+  try {
+    // Fetch requirements.txt
+    const requirementsData = await fetchGitHubAPI(`https://api.github.com/repos/${owner}/${repo}/contents/requirements.txt`);
+    const requirements = Buffer.from(requirementsData.content, 'base64').toString();
+    
+    const lines = requirements.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+    
+    for (const line of lines.slice(0, 5)) { // Check first 5 packages to avoid rate limits
+      const pkgMatch = line.match(/^([a-zA-Z0-9-_]+)/);
+      if (pkgMatch) {
+        const pkg = pkgMatch[1];
+        
+        // Check if version is pinned
+        if (!line.includes('==') && !line.includes('>=')) {
+          vulnerabilities.push({
+            package: pkg,
+            severity: 'warning',
+            message: `${pkg} has no pinned version (security risk)`
+          });
+        }
+        
+        // Check if package exists and is outdated
+        try {
+          const pypiData = await axios.get(`https://pypi.org/pypi/${pkg}/json`, { timeout: 3000 });
+          const latestVersion = pypiData.data.info.version;
+          const versionMatch = line.match(/==([0-9.]+)/);
+          
+          if (versionMatch) {
+            const currentVersion = versionMatch[1];
+            if (currentVersion !== latestVersion) {
+              vulnerabilities.push({
+                package: pkg,
+                severity: 'info',
+                message: `${pkg} may be outdated (current: ${currentVersion}, latest: ${latestVersion})`
+              });
+            }
+          }
+        } catch (err) {
+          // Skip if PyPI check fails
+        }
+      }
+    }
+  } catch (error) {
+    console.error('PyPI check error:', error.message);
+  }
+  
+  return vulnerabilities;
+}
+
+/**
+ * Check GitHub security advisories
+ */
+async function checkGitHubAdvisories(languages) {
+  const advisories = [];
+  
+  try {
+    const languageList = Object.keys(languages);
+    
+    for (const lang of languageList.slice(0, 2)) { // Check top 2 languages
+      const ecosystem = getEcosystem(lang);
+      if (ecosystem) {
+        try {
+          const response = await axios.get(`https://api.github.com/advisories`, {
+            params: {
+              affects: ecosystem,
+              per_page: 3
+            },
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'Codeward-App'
+            },
+            timeout: 5000
+          });
+          
+          if (response.data && response.data.length > 0) {
+            advisories.push({
+              language: lang,
+              ecosystem,
+              count: response.data.length,
+              message: `Known security advisories exist for ${lang} ecosystem`
+            });
+          }
+        } catch (err) {
+          // Skip if advisory check fails
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Advisory check error:', error.message);
+  }
+  
+  return advisories;
+}
+
+/**
+ * Map language to ecosystem
+ */
+function getEcosystem(language) {
+  const ecosystemMap = {
+    'JavaScript': 'npm',
+    'TypeScript': 'npm',
+    'Python': 'pip',
+    'Ruby': 'rubygems',
+    'Java': 'maven',
+    'Go': 'go',
+    'Rust': 'cargo',
+    'PHP': 'composer'
+  };
+  return ecosystemMap[language] || null;
+}
+
+/**
+ * Generate teach mode content
+ */
+function generateTeachMode(overview, contents, languages, repoData) {
+  const teachMode = {
+    languageExplainers: [],
+    repoStructure: [],
+    keyThings: [],
+    questionsToAsk: []
+  };
+
+  // Language explainers
+  const languageDescriptions = {
+    'JavaScript': 'The language that powers most websites and web apps. It runs in browsers and on servers.',
+    'TypeScript': 'A safer version of JavaScript that catches errors before your code runs. Used by large teams.',
+    'Python': 'A beginner-friendly language great for AI, data science, and automation work.',
+    'Java': 'A robust language used for enterprise software, Android apps, and large-scale systems.',
+    'Go': 'A fast, efficient language built by Google for backend services and cloud infrastructure.',
+    'Ruby': 'An elegant language focused on developer happiness. Popular for web apps with Rails framework.',
+    'PHP': 'A server-side language that powers many websites including WordPress.',
+    'C++': 'A powerful, fast language used for games, operating systems, and performance-critical apps.',
+    'C#': 'Microsoft\'s language for Windows apps, games (Unity), and enterprise software.',
+    'Rust': 'A modern language focused on safety and speed. Great for systems programming.',
+    'Shell': 'Scripts that automate tasks on Linux/Mac servers. The glue that holds systems together.',
+    'HTML': 'The structure of web pages. Not a programming language, but essential for websites.',
+    'CSS': 'The styling of web pages. Makes websites look good.',
+    'Swift': 'Apple\'s language for iOS and Mac apps.',
+    'Kotlin': 'A modern language for Android apps, preferred over Java by many developers.'
+  };
+
+  Object.keys(languages).forEach(lang => {
+    if (languageDescriptions[lang]) {
+      teachMode.languageExplainers.push({
+        language: lang,
+        description: languageDescriptions[lang]
+      });
+    }
+  });
+
+  // Repo structure insights
+  const fileNames = Array.isArray(contents) ? contents.map(item => item.name) : [];
+  
+  if (fileNames.includes('package.json')) {
+    teachMode.repoStructure.push('This is a Node.js project. It uses npm packages — external code libraries that add features.');
+  }
+  if (fileNames.includes('requirements.txt')) {
+    teachMode.repoStructure.push('This is a Python project with external dependencies listed in requirements.txt.');
+  }
+  if (fileNames.includes('Dockerfile')) {
+    teachMode.repoStructure.push('This app is containerized with Docker — it can run the same way on any computer.');
+  }
+  if (fileNames.some(f => f.startsWith('.github'))) {
+    teachMode.repoStructure.push('This repo has automated CI/CD workflows — it tests itself automatically on every change.');
+  }
+  if (fileNames.some(f => f.toLowerCase().includes('test'))) {
+    teachMode.repoStructure.push('This code has automated tests — they check if the code works correctly before deployment.');
+  }
+  if (fileNames.includes('README.md')) {
+    teachMode.repoStructure.push('This repo has documentation in README.md — a good sign of maintainability.');
+  }
+
+  // Key things to know
+  const contributors = repoData.network_count || 1;
+  const daysSinceUpdate = Math.floor((Date.now() - new Date(overview.lastUpdated).getTime()) / (1000 * 60 * 60 * 24));
+  
+  teachMode.keyThings.push(`This codebase has ${contributors} contributor${contributors > 1 ? 's' : ''} — ${contributors > 5 ? 'many eyes on the code means better quality' : 'a small team or solo project'}.`);
+  
+  if (daysSinceUpdate < 30) {
+    teachMode.keyThings.push(`Last updated ${daysSinceUpdate} days ago — this is an actively maintained project.`);
+  } else if (daysSinceUpdate < 180) {
+    teachMode.keyThings.push(`Last updated ${Math.floor(daysSinceUpdate / 30)} months ago — moderately active.`);
+  } else {
+    teachMode.keyThings.push(`Last updated ${Math.floor(daysSinceUpdate / 365)} year(s) ago — this project may be abandoned.`);
+  }
+  
+  if (overview.stars > 1000) {
+    teachMode.keyThings.push(`${overview.stars.toLocaleString()} stars means this is widely trusted by the developer community.`);
+  } else if (overview.stars > 100) {
+    teachMode.keyThings.push(`${overview.stars} stars indicates decent community trust.`);
+  }
+  
+  if (overview.hasLicense) {
+    teachMode.keyThings.push('Has a license file — you know the legal terms for using this code.');
+  }
+
+  // Questions to ask AI
+  if (!overview.hasLicense) {
+    teachMode.questionsToAsk.push('Ask your AI: "Can you add an MIT LICENSE file to this repo?"');
+  }
+  if (!fileNames.some(f => f.toLowerCase().includes('test'))) {
+    teachMode.questionsToAsk.push('Ask your AI: "Can you write basic tests for the main functions in this project?"');
+  }
+  if (fileNames.includes('package.json')) {
+    teachMode.questionsToAsk.push('Ask your AI: "Are there any security vulnerabilities in the package.json dependencies?"');
+  }
+  if (!fileNames.includes('README.md')) {
+    teachMode.questionsToAsk.push('Ask your AI: "Can you write a README.md explaining what this project does?"');
+  }
+  if (daysSinceUpdate > 180) {
+    teachMode.questionsToAsk.push('Ask your AI: "Are the dependencies in this project outdated? Should I update them?"');
+  }
+
+  return teachMode;
+}
  */
 async function fetchGitHubAPI(url) {
   const response = await axios.get(url, {
@@ -318,12 +676,44 @@ function getFixRecommendation(flag) {
 /**
  * Calculate risk score based on repository characteristics
  */
-function calculateRiskScore(overview, contents, repoData) {
+function calculateRiskScore(overview, contents, repoData, vulnerabilities) {
   let score = 50; // Start at medium risk
   const flags = [];
   
+  // Add vulnerability findings to flags
+  if (vulnerabilities) {
+    // Sensitive files (CRITICAL)
+    vulnerabilities.sensitiveFiles.forEach(vuln => {
+      flags.push(vuln);
+      score += 25; // Major penalty for exposed secrets
+    });
+    
+    // NPM vulnerabilities
+    vulnerabilities.npm.forEach(vuln => {
+      flags.push(vuln);
+      if (vuln.severity === 'critical') score += 20;
+      else if (vuln.severity === 'warning') score += 10;
+    });
+    
+    // PyPI vulnerabilities
+    vulnerabilities.pypi.forEach(vuln => {
+      flags.push(vuln);
+      if (vuln.severity === 'warning') score += 10;
+      else if (vuln.severity === 'info') score += 5;
+    });
+    
+    // GitHub advisories
+    vulnerabilities.advisories.forEach(advisory => {
+      flags.push({
+        severity: 'warning',
+        message: advisory.message
+      });
+      score += 15;
+    });
+  }
+  
   // Check for README
-  const hasReadme = Array.isArray(contents) && 
+  const hasReadme = Array.isArray(contents) &&
     contents.some(item => item.name.toLowerCase().startsWith('readme'));
   if (hasReadme) {
     score -= 10;
@@ -341,9 +731,9 @@ function calculateRiskScore(overview, contents, repoData) {
   }
   
   // Check for tests
-  const hasTests = Array.isArray(contents) && 
-    contents.some(item => 
-      item.name.toLowerCase().includes('test') || 
+  const hasTests = Array.isArray(contents) &&
+    contents.some(item =>
+      item.name.toLowerCase().includes('test') ||
       item.name.toLowerCase().includes('spec')
     );
   if (hasTests) {
@@ -357,9 +747,9 @@ function calculateRiskScore(overview, contents, repoData) {
   const lastUpdate = new Date(overview.lastUpdated);
   const monthsOld = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24 * 30);
   if (monthsOld > 6) {
-    flags.push({ 
-      severity: 'warning', 
-      message: `Repository not updated in ${Math.floor(monthsOld)} months` 
+    flags.push({
+      severity: 'warning',
+      message: `Repository not updated in ${Math.floor(monthsOld)} months`
     });
     score += 20;
   } else {
@@ -381,9 +771,9 @@ function calculateRiskScore(overview, contents, repoData) {
   }
   
   // Check for dependency files
-  const hasDependencies = Array.isArray(contents) && 
-    contents.some(item => 
-      item.name === 'package.json' || 
+  const hasDependencies = Array.isArray(contents) &&
+    contents.some(item =>
+      item.name === 'package.json' ||
       item.name === 'requirements.txt' ||
       item.name === 'Gemfile' ||
       item.name === 'pom.xml' ||
@@ -397,12 +787,12 @@ function calculateRiskScore(overview, contents, repoData) {
   }
   
   // Check for exposed .env file (critical security issue)
-  const hasExposedEnv = Array.isArray(contents) && 
+  const hasExposedEnv = Array.isArray(contents) &&
     contents.some(item => item.name === '.env');
   if (hasExposedEnv) {
-    flags.push({ 
-      severity: 'critical', 
-      message: 'Exposed .env file detected - potential credential leak' 
+    flags.push({
+      severity: 'critical',
+      message: 'Exposed .env file detected - potential credential leak'
     });
     score += 30;
   }

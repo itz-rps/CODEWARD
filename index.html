@@ -503,6 +503,103 @@
             padding-left: 2rem;
         }
 
+        /* Teach Mode Section */
+        .teach-section {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(79, 70, 229, 0.05));
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .teach-section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .teach-subsection {
+            margin-bottom: 2rem;
+        }
+
+        .teach-subsection:last-child {
+            margin-bottom: 0;
+        }
+
+        .teach-subtitle {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+            padding-bottom: 0.5rem;
+        }
+
+        .language-item {
+            background: rgba(30, 30, 46, 0.5);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .language-name {
+            font-weight: 600;
+            color: #6366f1;
+            margin-bottom: 0.5rem;
+        }
+
+        .language-desc {
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+
+        .teach-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .teach-list li {
+            background: rgba(30, 30, 46, 0.5);
+            border-left: 3px solid #6366f1;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 4px;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .teach-list li::before {
+            content: '→';
+            color: #6366f1;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .questions-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .questions-list li {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 8px;
+            color: #e2e8f0;
+            line-height: 1.6;
+            font-style: italic;
+        }
+
+        .questions-list li::before {
+            content: '💬';
+            margin-right: 0.5rem;
+        }
+
         /* Verdict Card */
         .verdict-card {
             text-align: center;
@@ -863,6 +960,31 @@
             <div id="fixList" class="fix-list"></div>
         </div>
 
+        <!-- Teach Mode Section -->
+        <div class="teach-section" id="teachSection">
+            <div class="teach-section-title">📚 Learn From This Repo</div>
+            
+            <div class="teach-subsection" id="languageExplainers">
+                <div class="teach-subtitle">What Languages Are Used?</div>
+                <div id="languagesList"></div>
+            </div>
+
+            <div class="teach-subsection" id="repoStructure">
+                <div class="teach-subtitle">What This Repo Structure Means</div>
+                <ul class="teach-list" id="structureList"></ul>
+            </div>
+
+            <div class="teach-subsection" id="keyThings">
+                <div class="teach-subtitle">Key Things to Know</div>
+                <ul class="teach-list" id="keyThingsList"></ul>
+            </div>
+
+            <div class="teach-subsection" id="questionsToAsk">
+                <div class="teach-subtitle">What to Ask Your AI Developer</div>
+                <ul class="questions-list" id="questionsList"></ul>
+            </div>
+        </div>
+
         <!-- Final Verdict Card -->
         <div id="finalVerdictCard" class="final-verdict-card">
             <div id="finalVerdictTitle" class="final-verdict-title"></div>
@@ -1025,8 +1147,14 @@
             // Fix Recommendations
             displayFixRecommendations(data.fixRecommendations);
 
+            // Teach Mode
+            displayTeachMode(data.teachMode);
+
             // Verdict
             displayVerdict(data.verdict, data.verdictAdvice, data.riskScore);
+
+            // Show Bob's verdict-based message
+            showBobVerdictMessage(data.riskScore);
 
             // Show report
             hideLoading();
@@ -1149,31 +1277,141 @@
             }
         }
 
+        // Display teach mode content
+        function displayTeachMode(teachMode) {
+            if (!teachMode) return;
+
+            // Language explainers
+            const languagesList = document.getElementById('languagesList');
+            languagesList.innerHTML = '';
+            teachMode.languageExplainers.forEach(lang => {
+                const langItem = document.createElement('div');
+                langItem.className = 'language-item';
+                langItem.innerHTML = `
+                    <div class="language-name">${lang.language}</div>
+                    <div class="language-desc">${lang.description}</div>
+                `;
+                languagesList.appendChild(langItem);
+            });
+
+            // Repo structure
+            const structureList = document.getElementById('structureList');
+            structureList.innerHTML = '';
+            teachMode.repoStructure.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                structureList.appendChild(li);
+            });
+
+            // Key things
+            const keyThingsList = document.getElementById('keyThingsList');
+            keyThingsList.innerHTML = '';
+            teachMode.keyThings.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                keyThingsList.appendChild(li);
+            });
+
+            // Questions to ask
+            const questionsList = document.getElementById('questionsList');
+            questionsList.innerHTML = '';
+            teachMode.questionsToAsk.forEach(question => {
+                const li = document.createElement('li');
+                li.textContent = question;
+                questionsList.appendChild(li);
+            });
+        }
+
         // Bob Mascot Functionality
-        const bobComments = [
+        const bobLoadingComments = [
+            "I read your code so you don't have to. You're welcome.",
+            "Booting up trust engines... beep boop... done.",
+            "Let me check if this code deserves to exist.",
+            "Scanning for chaos. Stand by."
+        ];
+
+        const bobSafeComments = [
+            "Clean code detected. You may proceed. Don't mess it up.",
+            "Low risk! Go touch grass. You earned it.",
+            "I've reviewed worse. Much, much worse.",
+            "This code passes the vibe check. Ship it."
+        ];
+
+        const bobReviewComments = [
+            "Medium risk detected. Coffee first, shipping second.",
+            "Some issues found. I'm judging silently.",
+            "Not terrible. Not great. Very middle energy.",
+            "Fix those issues and we'll talk."
+        ];
+
+        const bobDangerComments = [
+            "Yikes. I've seen things. Ship this and I disown you.",
+            "High risk detected. Step away from the deploy button.",
+            "This code needs therapy before production.",
+            "Bold of you to call this 'ready'. Very bold."
+        ];
+
+        const bobClickComments = [
             "I read 471 lines so you don't have to. You're welcome.",
             "No tests detected. Living dangerously, I see.",
             "README found. You're already better than 40% of devs.",
             "I've seen worse. Not much worse. But worse.",
-            "Ship it? Bold strategy. Let's see if it pays off.",
-            "Low risk! Go touch grass. You earned it.",
-            "Medium risk detected. Coffee first, shipping second."
+            "Ship it? Bold strategy. Let's see if it pays off."
         ];
 
         let currentCommentIndex = 0;
 
+        // Show Bob's initial message on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const bobSpeech = document.getElementById('bobSpeech');
+                const bobSpeechText = document.getElementById('bobSpeechText');
+                const randomComment = bobLoadingComments[Math.floor(Math.random() * bobLoadingComments.length)];
+                
+                bobSpeechText.textContent = randomComment;
+                bobSpeech.classList.add('show');
+                
+                setTimeout(() => {
+                    bobSpeech.classList.remove('show');
+                }, 4000);
+            }, 1000);
+        });
+
+        // Show verdict-based message after analysis
+        function showBobVerdictMessage(riskScore) {
+            setTimeout(() => {
+                const bobSpeech = document.getElementById('bobSpeech');
+                const bobSpeechText = document.getElementById('bobSpeechText');
+                
+                let comments;
+                if (riskScore <= 30) {
+                    comments = bobSafeComments;
+                } else if (riskScore <= 60) {
+                    comments = bobReviewComments;
+                } else {
+                    comments = bobDangerComments;
+                }
+                
+                const randomComment = comments[Math.floor(Math.random() * comments.length)];
+                bobSpeechText.textContent = randomComment;
+                bobSpeech.classList.add('show');
+                
+                setTimeout(() => {
+                    bobSpeech.classList.remove('show');
+                }, 4000);
+            }, 1500);
+        }
+
+        // Click to cycle through comments
         document.getElementById('bobMascot').addEventListener('click', () => {
             const bobSpeech = document.getElementById('bobSpeech');
             const bobSpeechText = document.getElementById('bobSpeechText');
             
-            // Show speech bubble with random comment
-            bobSpeechText.textContent = bobComments[currentCommentIndex];
+            bobSpeechText.textContent = bobClickComments[currentCommentIndex];
             bobSpeech.classList.add('show');
             
-            // Cycle to next comment
-            currentCommentIndex = (currentCommentIndex + 1) % bobComments.length;
+            currentCommentIndex = (currentCommentIndex + 1) % bobClickComments.length;
             
-            // Hide after 3 seconds
             setTimeout(() => {
                 bobSpeech.classList.remove('show');
             }, 3000);
