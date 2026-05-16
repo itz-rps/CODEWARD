@@ -1107,6 +1107,10 @@
 
         // Display report
         function displayReport(data) {
+            // Debug: Log the entire response
+            console.log('Full API Response:', data);
+            console.log('Teach Mode Data:', data.teachMode);
+            
             // Overview
             document.getElementById('repoName').textContent = data.overview.fullName;
             document.getElementById('repoDescription').textContent = data.overview.description;
@@ -1290,6 +1294,7 @@
             const languagesList = document.getElementById('languagesList');
             if (languagesList) {
                 languagesList.innerHTML = '';
+                console.log('Language explainers:', teachMode.languageExplainers);
                 if (teachMode.languageExplainers && teachMode.languageExplainers.length > 0) {
                     teachMode.languageExplainers.forEach(lang => {
                         const langItem = document.createElement('div');
@@ -1300,6 +1305,9 @@
                         `;
                         languagesList.appendChild(langItem);
                     });
+                    console.log(`Added ${teachMode.languageExplainers.length} language items`);
+                } else {
+                    languagesList.innerHTML = '<p style="color: #94a3b8; padding: 1rem;">No language information available</p>';
                 }
             }
 
@@ -1307,12 +1315,16 @@
             const structureList = document.getElementById('structureList');
             if (structureList) {
                 structureList.innerHTML = '';
+                console.log('Repo structure:', teachMode.repoStructure);
                 if (teachMode.repoStructure && teachMode.repoStructure.length > 0) {
                     teachMode.repoStructure.forEach(item => {
                         const li = document.createElement('li');
                         li.textContent = item;
                         structureList.appendChild(li);
                     });
+                    console.log(`Added ${teachMode.repoStructure.length} structure items`);
+                } else {
+                    structureList.innerHTML = '<li style="color: #94a3b8;">No structure information available</li>';
                 }
             }
 
@@ -1320,12 +1332,16 @@
             const keyThingsList = document.getElementById('keyThingsList');
             if (keyThingsList) {
                 keyThingsList.innerHTML = '';
+                console.log('Key things:', teachMode.keyThings);
                 if (teachMode.keyThings && teachMode.keyThings.length > 0) {
                     teachMode.keyThings.forEach(item => {
                         const li = document.createElement('li');
                         li.textContent = item;
                         keyThingsList.appendChild(li);
                     });
+                    console.log(`Added ${teachMode.keyThings.length} key things`);
+                } else {
+                    keyThingsList.innerHTML = '<li style="color: #94a3b8;">No key information available</li>';
                 }
             }
 
@@ -1333,16 +1349,20 @@
             const questionsList = document.getElementById('questionsList');
             if (questionsList) {
                 questionsList.innerHTML = '';
+                console.log('Questions to ask:', teachMode.questionsToAsk);
                 if (teachMode.questionsToAsk && teachMode.questionsToAsk.length > 0) {
                     teachMode.questionsToAsk.forEach(question => {
                         const li = document.createElement('li');
                         li.textContent = question;
                         questionsList.appendChild(li);
                     });
+                    console.log(`Added ${teachMode.questionsToAsk.length} questions`);
+                } else {
+                    questionsList.innerHTML = '<li style="color: #94a3b8;">No questions available</li>';
                 }
             }
             
-            console.log('Teach mode displayed successfully');
+            console.log('Teach mode display complete');
         }
 
         // Bob Mascot Functionality
