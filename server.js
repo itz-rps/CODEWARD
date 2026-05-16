@@ -857,9 +857,9 @@ function determineVerdict(score) {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 Codeward server running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔍 API endpoint: POST http://localhost:${PORT}/api/analyze\n`);
+  console.log(`\n🚀 Codeward server running on port ${PORT}`);
+  console.log(`📊 Health check: /health`);
+  console.log(`🔍 API endpoint: POST /api/analyze\n`);
   
   if (!process.env.WATSONX_API_KEY) {
     console.warn('⚠️  WATSONX_API_KEY not set - using fallback summaries');
