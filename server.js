@@ -25,15 +25,18 @@ app.get('/health', (req, res) => {
 
 // Main analysis endpoint
 app.post('/api/analyze', async (req, res) => {
-  console.log('Analysis requested for:', req.body.repoUrl);
+  console.log('=== Analysis Request Received ===');
+  console.log('Request body:', req.body);
+  console.log('Request headers:', req.headers);
   
   try {
     const { repoUrl } = req.body;
     
     // Validate GitHub URL
     if (!repoUrl || !repoUrl.startsWith('https://github.com/')) {
-      return res.status(400).json({ 
-        error: 'Invalid GitHub URL format' 
+      console.error('Invalid URL format:', repoUrl);
+      return res.status(400).json({
+        error: 'Invalid GitHub URL format'
       });
     }
     
@@ -124,23 +127,29 @@ app.post('/api/analyze', async (req, res) => {
     res.json(analysis);
     
   } catch (error) {
-    console.error('Analysis error:', error.message);
+    console.error('=== Analysis Error ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error response:', error.response?.status, error.response?.statusText);
     
     if (error.response?.status === 404) {
-      return res.status(404).json({ 
-        error: 'Repository not found or is private' 
+      console.log('Returning 404: Repository not found');
+      return res.status(404).json({
+        error: 'Repository not found or is private'
       });
     }
     
     if (error.response?.status === 403) {
-      return res.status(429).json({ 
-        error: 'GitHub API rate limit reached. Please try again later.' 
+      console.log('Returning 429: Rate limit reached');
+      return res.status(429).json({
+        error: 'GitHub API rate limit reached. Please try again later.'
       });
     }
     
-    res.status(500).json({ 
+    console.log('Returning 500: Internal server error');
+    res.status(500).json({
       error: 'Failed to analyze repository',
-      details: error.message 
+      details: error.message
     });
   }
 });

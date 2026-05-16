@@ -1079,6 +1079,7 @@
                 }, 800);
 
                 // Call backend API
+                console.log('Fetching analysis for:', repoUrl);
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
@@ -1087,21 +1088,44 @@
                     body: JSON.stringify({ repoUrl })
                 });
 
+                console.log('Response status:', response.status);
                 clearInterval(stepInterval);
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Analysis failed');
+                    let errorMessage = 'Analysis failed';
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                        console.error('Server error:', errorData);
+                    } catch (e) {
+                        console.error('Could not parse error response:', e);
+                        errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 const data = await response.json();
+                console.log('Analysis complete:', data);
                 displayReport(data);
 
             } catch (error) {
-                console.error('Analysis error:', error);
+                console.error('Analysis error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    type: error.constructor.name
+                });
                 hideLoading();
                 showHero();
-                showError(error.message || 'Failed to analyze repository. Please try again.');
+                
+                // Provide more specific error messages
+                let userMessage = error.message;
+                if (error.message.includes('Failed to fetch')) {
+                    userMessage = 'Cannot connect to server. Please check if the server is running and try again.';
+                } else if (error.message.includes('NetworkError')) {
+                    userMessage = 'Network error. Please check your internet connection and try again.';
+                }
+                
+                showError(userMessage);
             }
         }
 
