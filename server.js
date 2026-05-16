@@ -88,12 +88,20 @@ app.post('/api/analyze', async (req, res) => {
     // Determine verdict
     const verdict = determineVerdict(riskAnalysis.score);
     
+    // Generate fix recommendations for each flag
+    const fixRecommendations = riskAnalysis.flags.map(flag => getFixRecommendation(flag));
+    
+    // Get score explanation
+    const scoreExplanation = getScoreExplanation(riskAnalysis.score);
+    
     // Build response
     const analysis = {
       overview,
       summary,
       riskScore: riskAnalysis.score,
+      scoreExplanation,
       redFlags: riskAnalysis.flags,
+      fixRecommendations,
       verdict: verdict.label,
       verdictAdvice: verdict.advice
     };
@@ -197,11 +205,114 @@ Write a 3 sentence plain English summary of what this code does. Write it for so
  */
 function generateFallbackSummary(overview, languages) {
   const languageList = Object.keys(languages).join(', ') || overview.language;
-  const description = overview.description !== 'No description provided' 
-    ? overview.description 
+  const description = overview.description !== 'No description provided'
+    ? overview.description
     : `a ${languageList} project`;
   
-  return `This is ${description}. The repository contains code written primarily in ${languageList}. It appears to be a software project that can be reviewed for quality and security concerns.`;
+  // More human, warmer summary
+  const projectType = getProjectType(languageList, overview.name);
+  return `This is ${description}. It's written in ${languageList}. ${projectType}`;
+}
+
+/**
+ * Determine project type for better summary
+ */
+function getProjectType(languages, name) {
+  const lowerLang = languages.toLowerCase();
+  const lowerName = name.toLowerCase();
+  
+  if (lowerLang.includes('javascript') || lowerLang.includes('typescript')) {
+    if (lowerName.includes('api') || lowerName.includes('server')) {
+      return 'This looks like a web server or API that handles data and requests.';
+    }
+    return 'This appears to be a web application or tool built with modern JavaScript.';
+  }
+  
+  if (lowerLang.includes('python')) {
+    if (lowerName.includes('ml') || lowerName.includes('ai') || lowerName.includes('model')) {
+      return 'This looks like a machine learning or AI project.';
+    }
+    return 'This is a Python application that likely processes data or automates tasks.';
+  }
+  
+  if (lowerLang.includes('java')) {
+    return 'This is a Java application, typically used for enterprise software or Android apps.';
+  }
+  
+  if (lowerLang.includes('html') || lowerLang.includes('css')) {
+    return 'This is a website or web interface.';
+  }
+  
+  return 'This is a software project that can be reviewed for quality and security.';
+}
+
+/**
+ * Get fix recommendation for a red flag
+ */
+function getFixRecommendation(flag) {
+  const message = flag.message.toLowerCase();
+  
+  if (message.includes('no readme')) {
+    return {
+      issue: flag.message,
+      fix: 'Add a README.md file explaining what your project does. Go to GitHub → Add file → Create new file → name it README.md. Write 3-4 sentences about what your code does and how to use it.'
+    };
+  }
+  
+  if (message.includes('no license')) {
+    return {
+      issue: flag.message,
+      fix: 'Add a LICENSE file to protect your code legally. Go to GitHub → Add file → Create new file → name it LICENSE. GitHub will offer license templates - MIT License is a good default for open source.'
+    };
+  }
+  
+  if (message.includes('no test')) {
+    return {
+      issue: flag.message,
+      fix: 'Your code has no tests. Tests check if your code works correctly and catches bugs early. Ask your AI coding tool to generate tests for your main functions. Put them in a folder called "tests" or "__tests__".'
+    };
+  }
+  
+  if (message.includes('not updated')) {
+    return {
+      issue: flag.message,
+      fix: 'This repository hasn\'t been updated recently. If you\'re still working on it, make a small commit to show it\'s active. Old code can have security issues or outdated dependencies.'
+    };
+  }
+  
+  if (message.includes('no description')) {
+    return {
+      issue: flag.message,
+      fix: 'Add a description to your repository. Go to GitHub → Settings (gear icon at top) → Add a short description. This helps people understand what your project does at a glance.'
+    };
+  }
+  
+  if (message.includes('single file')) {
+    return {
+      issue: flag.message,
+      fix: 'Your project is just one file. Consider organizing your code into multiple files - one for each major feature. This makes it easier to maintain and understand.'
+    };
+  }
+  
+  if (message.includes('no dependency')) {
+    return {
+      issue: flag.message,
+      fix: 'Add a dependency file (package.json for JavaScript, requirements.txt for Python, etc.). This tells others what libraries your code needs to run. Your AI tool can generate this for you.'
+    };
+  }
+  
+  if (message.includes('.env')) {
+    return {
+      issue: flag.message,
+      fix: 'CRITICAL: You have an exposed .env file with potential secrets! Go to GitHub → find .env file → delete it immediately. Never commit files with passwords or API keys. Add .env to your .gitignore file.'
+    };
+  }
+  
+  // Default for any other flags
+  return {
+    issue: flag.message,
+    fix: 'Review this issue and consider addressing it before deploying your code to production.'
+  };
 }
 
 /**
@@ -305,6 +416,19 @@ function calculateRiskScore(overview, contents, repoData) {
   }
   
   return { score, flags };
+}
+
+/**
+ * Get plain English explanation of risk score
+ */
+function getScoreExplanation(score) {
+  if (score <= 30) {
+    return 'This code looks solid. Safe to move forward.';
+  } else if (score <= 60) {
+    return 'Some things need attention before shipping.';
+  } else {
+    return 'This code needs work before it\'s ready.';
+  }
 }
 
 /**
