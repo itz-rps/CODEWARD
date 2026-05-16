@@ -563,6 +563,132 @@
             margin-bottom: 2rem;
         }
 
+        /* Full-Width Verdict Card */
+        .final-verdict-card {
+            width: 100%;
+            padding: 3rem 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-top: 2rem;
+            animation: fadeIn 0.5s ease forwards;
+            animation-delay: 0.8s;
+            opacity: 0;
+        }
+
+        .final-verdict-card.safe {
+            background: #0d2b1a;
+            border: 2px solid #22c55e;
+        }
+
+        .final-verdict-card.review {
+            background: #2b1f0a;
+            border: 2px solid #eab308;
+        }
+
+        .final-verdict-card.danger {
+            background: #2b0d0d;
+            border: 2px solid #ef4444;
+        }
+
+        .final-verdict-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .final-verdict-card.safe .final-verdict-title {
+            color: #22c55e;
+        }
+
+        .final-verdict-card.review .final-verdict-title {
+            color: #eab308;
+        }
+
+        .final-verdict-card.danger .final-verdict-title {
+            color: #ef4444;
+        }
+
+        .final-verdict-subtitle {
+            font-size: 1.2rem;
+            color: #cbd5e1;
+            margin-bottom: 2rem;
+        }
+
+        /* Bob Mascot Widget */
+        .bob-mascot {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            cursor: pointer;
+            animation: bobBounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bobBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .bob-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .bob-avatar:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.7);
+        }
+
+        .bob-avatar svg {
+            width: 45px;
+            height: 45px;
+            fill: white;
+        }
+
+        .bob-speech-bubble {
+            position: absolute;
+            bottom: 85px;
+            right: 0;
+            background: #1e1e2e;
+            border: 2px solid #6366f1;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            min-width: 250px;
+            max-width: 300px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.3s ease;
+            display: none;
+        }
+
+        .bob-speech-bubble.show {
+            display: block;
+        }
+
+        .bob-speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: 25px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid #6366f1;
+        }
+
+        .bob-speech-text {
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
         .analyze-another-btn {
             padding: 0.75rem 2rem;
             font-size: 1rem;
@@ -737,13 +863,25 @@
             <div id="fixList" class="fix-list"></div>
         </div>
 
-        <!-- Verdict Card -->
-        <div id="verdictCard" class="report-card verdict-card">
-            <div id="verdictBadge" class="verdict-badge"></div>
-            <div id="verdictAdvice" class="verdict-advice"></div>
+        <!-- Final Verdict Card -->
+        <div id="finalVerdictCard" class="final-verdict-card">
+            <div id="finalVerdictTitle" class="final-verdict-title"></div>
+            <div id="finalVerdictSubtitle" class="final-verdict-subtitle"></div>
             <button id="analyzeAnotherBtn" class="analyze-another-btn">Analyze Another Repo</button>
         </div>
     </section>
+
+    <!-- Bob Mascot Widget -->
+    <div class="bob-mascot" id="bobMascot">
+        <div class="bob-avatar">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C10.9 2 10 2.9 10 4V6H8C6.9 6 6 6.9 6 8V20C6 21.1 6.9 22 8 22H16C17.1 22 18 21.1 18 20V8C18 6.9 17.1 6 16 6H14V4C14 2.9 13.1 2 12 2M12 4C12.6 4 13 4.4 13 5C13 5.6 12.6 6 12 6C11.4 6 11 5.6 11 5C11 4.4 11.4 4 12 4M9 9H11V11H9V9M13 9H15V11H13V9M9 13H15V15H9V13M9 17H15V19H9V17Z"/>
+            </svg>
+        </div>
+        <div class="bob-speech-bubble" id="bobSpeech">
+            <div class="bob-speech-text" id="bobSpeechText"></div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer>
@@ -989,28 +1127,57 @@
 
         // Display verdict
         function displayVerdict(verdict, advice, riskScore) {
-            const verdictCard = document.getElementById('verdictCard');
-            const verdictBadge = document.getElementById('verdictBadge');
-            const verdictAdvice = document.getElementById('verdictAdvice');
+            const finalVerdictCard = document.getElementById('finalVerdictCard');
+            const finalVerdictTitle = document.getElementById('finalVerdictTitle');
+            const finalVerdictSubtitle = document.getElementById('finalVerdictSubtitle');
 
-            verdictBadge.textContent = verdict;
-            verdictAdvice.textContent = advice;
-
-            // Set card style based on risk score
-            verdictCard.classList.remove('safe', 'review', 'danger');
+            // Set verdict content based on risk score
+            finalVerdictCard.classList.remove('safe', 'review', 'danger');
+            
             if (riskScore <= 30) {
-                verdictCard.classList.add('safe');
+                finalVerdictCard.classList.add('safe');
+                finalVerdictTitle.textContent = '✅ SAFE TO SHIP';
+                finalVerdictSubtitle.textContent = "This code looks healthy. You're good to go.";
             } else if (riskScore <= 60) {
-                verdictCard.classList.add('review');
+                finalVerdictCard.classList.add('review');
+                finalVerdictTitle.textContent = '⚠️ NEEDS REVIEW';
+                finalVerdictSubtitle.textContent = 'Fix the issues above before shipping.';
             } else {
-                verdictCard.classList.add('danger');
+                finalVerdictCard.classList.add('danger');
+                finalVerdictTitle.textContent = '🚫 NOT READY';
+                finalVerdictSubtitle.textContent = 'This code needs serious attention first.';
             }
-
-            // Add pulse animation after fade-in completes
-            setTimeout(() => {
-                verdictCard.classList.add('pulse-animation');
-            }, 1100); // Wait for fade-in (600ms delay + 500ms animation)
         }
+
+        // Bob Mascot Functionality
+        const bobComments = [
+            "I read 471 lines so you don't have to. You're welcome.",
+            "No tests detected. Living dangerously, I see.",
+            "README found. You're already better than 40% of devs.",
+            "I've seen worse. Not much worse. But worse.",
+            "Ship it? Bold strategy. Let's see if it pays off.",
+            "Low risk! Go touch grass. You earned it.",
+            "Medium risk detected. Coffee first, shipping second."
+        ];
+
+        let currentCommentIndex = 0;
+
+        document.getElementById('bobMascot').addEventListener('click', () => {
+            const bobSpeech = document.getElementById('bobSpeech');
+            const bobSpeechText = document.getElementById('bobSpeechText');
+            
+            // Show speech bubble with random comment
+            bobSpeechText.textContent = bobComments[currentCommentIndex];
+            bobSpeech.classList.add('show');
+            
+            // Cycle to next comment
+            currentCommentIndex = (currentCommentIndex + 1) % bobComments.length;
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                bobSpeech.classList.remove('show');
+            }, 3000);
+        });
 
         // UI State Management
         function showLoading() {
