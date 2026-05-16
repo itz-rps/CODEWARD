@@ -847,7 +847,7 @@ function determineVerdict(score) {
 }
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Codeward server running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔍 API endpoint: POST http://localhost:${PORT}/api/analyze\n`);
