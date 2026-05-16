@@ -467,6 +467,42 @@
             color: #22c55e;
         }
 
+        /* Fix Recommendations */
+        .fix-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .fix-item {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            animation: slideIn 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        .fix-issue {
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .fix-issue::before {
+            content: '⚠️';
+            font-size: 1.2rem;
+        }
+
+        .fix-solution {
+            color: #94a3b8;
+            line-height: 1.6;
+            padding-left: 2rem;
+        }
+
         /* Verdict Card */
         .verdict-card {
             text-align: center;
@@ -692,6 +728,15 @@
             <div id="flagsList" class="flags-list"></div>
         </div>
 
+        <!-- Fix Recommendations Card -->
+        <div class="report-card">
+            <div class="card-header">
+                <div class="card-icon">🔧</div>
+                <div class="card-title">How to Fix This</div>
+            </div>
+            <div id="fixList" class="fix-list"></div>
+        </div>
+
         <!-- Verdict Card -->
         <div id="verdictCard" class="report-card verdict-card">
             <div id="verdictBadge" class="verdict-badge"></div>
@@ -839,8 +884,11 @@
             // Red Flags
             displayRedFlags(data.redFlags);
 
+            // Fix Recommendations
+            displayFixRecommendations(data.fixRecommendations);
+
             // Verdict
-            displayVerdict(data.verdict, data.verdictAdvice);
+            displayVerdict(data.verdict, data.verdictAdvice, data.riskScore);
 
             // Show report
             hideLoading();
@@ -917,8 +965,30 @@
             });
         }
 
+        // Display fix recommendations
+        function displayFixRecommendations(recommendations) {
+            const fixList = document.getElementById('fixList');
+            fixList.innerHTML = '';
+
+            if (!recommendations || recommendations.length === 0) {
+                fixList.innerHTML = '<p style="color: #94a3b8;">No fixes needed - looking good!</p>';
+                return;
+            }
+
+            recommendations.forEach((rec, index) => {
+                const fixItem = document.createElement('div');
+                fixItem.className = 'fix-item';
+                fixItem.style.animationDelay = `${index * 0.1}s`;
+                fixItem.innerHTML = `
+                    <div class="fix-issue">${rec.issue}</div>
+                    <div class="fix-solution">${rec.fix}</div>
+                `;
+                fixList.appendChild(fixItem);
+            });
+        }
+
         // Display verdict
-        function displayVerdict(verdict, advice) {
+        function displayVerdict(verdict, advice, riskScore) {
             const verdictCard = document.getElementById('verdictCard');
             const verdictBadge = document.getElementById('verdictBadge');
             const verdictAdvice = document.getElementById('verdictAdvice');
@@ -926,11 +996,11 @@
             verdictBadge.textContent = verdict;
             verdictAdvice.textContent = advice;
 
-            // Set card style based on verdict
+            // Set card style based on risk score
             verdictCard.classList.remove('safe', 'review', 'danger');
-            if (verdict === 'SAFE TO SHIP') {
+            if (riskScore <= 30) {
                 verdictCard.classList.add('safe');
-            } else if (verdict === 'NEEDS REVIEW') {
+            } else if (riskScore <= 60) {
                 verdictCard.classList.add('review');
             } else {
                 verdictCard.classList.add('danger');
