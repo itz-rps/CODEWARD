@@ -1151,8 +1151,8 @@
             // Fix Recommendations
             displayFixRecommendations(data.fixRecommendations);
 
-            // Teach Mode
-            displayTeachMode(data.teachMode);
+            // Teach Mode - pass full data object
+            displayTeachMode(data);
 
             // Verdict
             displayVerdict(data.verdict, data.verdictAdvice, data.riskScore);
@@ -1281,85 +1281,179 @@
             }
         }
 
-        // Display teach mode content
-        function displayTeachMode(teachMode) {
-            console.log('displayTeachMode called with:', teachMode);
+        // Display teach mode content - generates from raw data
+        function displayTeachMode(data) {
+            console.log('displayTeachMode called with data:', data);
             
-            if (!teachMode) {
-                console.warn('No teachMode data provided');
+            if (!data || !data.overview) {
+                console.warn('No data provided to displayTeachMode');
                 return;
             }
 
-            // Language explainers
+            // Language descriptions mapping
+            const languageDescriptions = {
+                'TypeScript': 'A safer version of JavaScript that catches errors before running',
+                'JavaScript': 'The language that powers most websites',
+                'Python': 'Beginner-friendly, great for AI and data work',
+                'HTML': 'Defines the structure and content of web pages',
+                'CSS': 'Controls how web pages look and are styled',
+                'Go': 'A fast backend language built by Google',
+                'Shell': 'Scripts that automate tasks on servers',
+                'Ruby': 'A clean language popular for web apps',
+                'Java': 'A robust language for enterprise apps and Android',
+                'C++': 'A powerful language for games and system software',
+                'C#': 'Microsoft\'s language for Windows apps and games',
+                'Rust': 'A modern language focused on safety and speed',
+                'PHP': 'A server-side language that powers many websites',
+                'Swift': 'Apple\'s language for iOS and Mac apps',
+                'Kotlin': 'A modern language for Android apps'
+            };
+
+            // 1. What Languages Are Used?
             const languagesList = document.getElementById('languagesList');
             if (languagesList) {
                 languagesList.innerHTML = '';
-                console.log('Language explainers:', teachMode.languageExplainers);
-                if (teachMode.languageExplainers && teachMode.languageExplainers.length > 0) {
-                    teachMode.languageExplainers.forEach(lang => {
-                        const langItem = document.createElement('div');
-                        langItem.className = 'language-item';
-                        langItem.innerHTML = `
-                            <div class="language-name">${lang.language}</div>
-                            <div class="language-desc">${lang.description}</div>
-                        `;
-                        languagesList.appendChild(langItem);
-                    });
-                    console.log(`Added ${teachMode.languageExplainers.length} language items`);
+                const mainLanguage = data.overview.language;
+                
+                if (mainLanguage && mainLanguage !== 'Unknown') {
+                    const langItem = document.createElement('div');
+                    langItem.className = 'language-item';
+                    const description = languageDescriptions[mainLanguage] || 'A programming language used in this project';
+                    langItem.innerHTML = `
+                        <div class="language-name">${mainLanguage}</div>
+                        <div class="language-desc">${description}</div>
+                    `;
+                    languagesList.appendChild(langItem);
+                    console.log('Added language:', mainLanguage);
                 } else {
-                    languagesList.innerHTML = '<p style="color: #94a3b8; padding: 1rem;">No language information available</p>';
+                    languagesList.innerHTML = '<p style="color: #94a3b8; padding: 1rem;">Language information not available</p>';
                 }
             }
 
-            // Repo structure
+            // 2. What This Repo Structure Means
             const structureList = document.getElementById('structureList');
             if (structureList) {
                 structureList.innerHTML = '';
-                console.log('Repo structure:', teachMode.repoStructure);
-                if (teachMode.repoStructure && teachMode.repoStructure.length > 0) {
-                    teachMode.repoStructure.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = item;
-                        structureList.appendChild(li);
-                    });
-                    console.log(`Added ${teachMode.repoStructure.length} structure items`);
+                const structureItems = [];
+                
+                // Analyze based on file count
+                if (data.overview.fileCount === 1) {
+                    structureItems.push('This is a single-file project — simple and focused on one task');
+                } else if (data.overview.fileCount < 10) {
+                    structureItems.push('This is a small project with just a few files — easy to understand');
+                } else if (data.overview.fileCount < 50) {
+                    structureItems.push('This is a medium-sized project with organized file structure');
                 } else {
-                    structureList.innerHTML = '<li style="color: #94a3b8;">No structure information available</li>';
+                    structureItems.push('This is a large project with many files — likely a complex application');
                 }
+                
+                // Check for common patterns from red flags
+                const hasReadme = !data.redFlags.some(flag => flag.message.toLowerCase().includes('readme'));
+                const hasTests = !data.redFlags.some(flag => flag.message.toLowerCase().includes('test'));
+                const hasLicense = data.overview.hasLicense;
+                
+                if (hasReadme) {
+                    structureItems.push('Has documentation (README) — good sign of maintainability');
+                }
+                if (hasTests) {
+                    structureItems.push('Includes test files — code quality is being checked automatically');
+                }
+                if (hasLicense) {
+                    structureItems.push('Has a license file — legal terms for using this code are clear');
+                }
+                
+                structureItems.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    structureList.appendChild(li);
+                });
+                
+                console.log('Added structure items:', structureItems.length);
             }
 
-            // Key things
+            // 3. Key Things to Know
             const keyThingsList = document.getElementById('keyThingsList');
             if (keyThingsList) {
                 keyThingsList.innerHTML = '';
-                console.log('Key things:', teachMode.keyThings);
-                if (teachMode.keyThings && teachMode.keyThings.length > 0) {
-                    teachMode.keyThings.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = item;
-                        keyThingsList.appendChild(li);
-                    });
-                    console.log(`Added ${teachMode.keyThings.length} key things`);
-                } else {
-                    keyThingsList.innerHTML = '<li style="color: #94a3b8;">No key information available</li>';
+                const keyItems = [];
+                
+                // Stars
+                if (data.overview.stars > 1000) {
+                    keyItems.push(`${data.overview.stars.toLocaleString()} stars — widely trusted by developers`);
+                } else if (data.overview.stars > 100) {
+                    keyItems.push(`${data.overview.stars} stars — decent community trust`);
+                } else if (data.overview.stars > 0) {
+                    keyItems.push(`${data.overview.stars} stars — small but growing community`);
                 }
+                
+                // Forks
+                if (data.overview.forks > 100) {
+                    keyItems.push(`${data.overview.forks.toLocaleString()} forks — many developers are building on this`);
+                } else if (data.overview.forks > 10) {
+                    keyItems.push(`${data.overview.forks} forks — some developers are using and modifying this`);
+                }
+                
+                // Last updated
+                const lastUpdate = new Date(data.overview.lastUpdated);
+                const daysAgo = Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysAgo < 30) {
+                    keyItems.push(`Updated ${daysAgo} days ago — actively maintained`);
+                } else if (daysAgo < 180) {
+                    keyItems.push(`Updated ${Math.floor(daysAgo / 30)} months ago — moderately active`);
+                } else {
+                    keyItems.push(`Updated ${Math.floor(daysAgo / 365)} year(s) ago — may be abandoned`);
+                }
+                
+                keyItems.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    keyThingsList.appendChild(li);
+                });
+                
+                console.log('Added key things:', keyItems.length);
             }
 
-            // Questions to ask
+            // 4. What to Ask Your AI Developer
             const questionsList = document.getElementById('questionsList');
             if (questionsList) {
                 questionsList.innerHTML = '';
-                console.log('Questions to ask:', teachMode.questionsToAsk);
-                if (teachMode.questionsToAsk && teachMode.questionsToAsk.length > 0) {
-                    teachMode.questionsToAsk.forEach(question => {
-                        const li = document.createElement('li');
-                        li.textContent = question;
-                        questionsList.appendChild(li);
-                    });
-                    console.log(`Added ${teachMode.questionsToAsk.length} questions`);
-                } else {
-                    questionsList.innerHTML = '<li style="color: #94a3b8;">No questions available</li>';
+                const questions = [];
+                
+                // Generate questions based on red flags
+                const hasNoLicense = data.redFlags.some(flag => flag.message.toLowerCase().includes('license'));
+                const hasNoTests = data.redFlags.some(flag => flag.message.toLowerCase().includes('test'));
+                const hasNoReadme = data.redFlags.some(flag => flag.message.toLowerCase().includes('readme'));
+                
+                if (hasNoLicense) {
+                    questions.push('Ask your AI: "Can you add an MIT LICENSE file to this repo?"');
                 }
+                if (hasNoTests) {
+                    questions.push('Ask your AI: "Can you write basic tests for the main functions?"');
+                }
+                if (hasNoReadme) {
+                    questions.push('Ask your AI: "Can you write a README explaining what this does?"');
+                }
+                
+                // Always add this question
+                questions.push('Ask your AI to explain the main file in plain English');
+                
+                // Add security question if there are vulnerabilities
+                if (data.vulnerabilities && (
+                    data.vulnerabilities.npm?.length > 0 ||
+                    data.vulnerabilities.pypi?.length > 0 ||
+                    data.vulnerabilities.sensitiveFiles?.length > 0
+                )) {
+                    questions.push('Ask your AI: "Are there security vulnerabilities I should fix?"');
+                }
+                
+                questions.forEach((question, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = question;
+                    questionsList.appendChild(li);
+                });
+                
+                console.log('Added questions:', questions.length);
             }
             
             console.log('Teach mode display complete');
