@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneForce - AI Disaster Planner</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1E1E2F; /* Dark Blue */
+            color: #FFFFFF;
+        }
+        /* Custom map container to manage canvas overlay, optimized for mobile height */
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 55vh; /* slightly less height on mobile to fit controls */
+            max-height: 550px;
+            margin: auto;
+            border: 3px solid #2EC4B6;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(46, 196, 182, 0.4); /* Neon border effect */
+            overflow: hidden;
+        }
+        .floorplan-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.2; /* Dims the map image for better contrast with route */
+        }
+        .route-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        /* Enhanced screen transitions for a better mobile app feel */
+        .screen {
+            transition: opacity 0.4s ease-in-out;
+            min-height: 100vh;
+            padding: 24px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Global Alert Notifier (Improved visibility) -->
+    <div id="notifier" class="fixed top-0 left-0 right-0 p-4 bg-[#FFA500] text-white font-black text-center z-50 transform -translate-y-full transition-transform duration-300 rounded-b-xl shadow-2xl tracking-wide uppercase">
+        Notifier Message
+    </div>
+
+    <!-- Main Application Container -->
+    <div id="app" class="flex-grow">
+
+        <!-- Screen 1: Intro / Welcome Screen -->
+        <div id="screen-intro" data-screen="intro" class="screen flex flex-col items-center justify-center text-center">
+            <!-- New Logo using the uploaded file -->
+            <img src="uploaded:WhatsApp Image 2025-09-28 at 10.25.41 AM.jpeg-b44956dc-e896-48f8-baae-de218eb48114" alt="OneForce Logo: Shield with Fire and F" class="w-48 h-48 md:w-64 md:h-64 mb-6 drop-shadow-2xl">
+            
+            <!-- App Name/Title (Simplified) -->
+            <h1 class="text-5xl md:text-7xl font-black mb-1 text-white uppercase tracking-wider drop-shadow-lg">
+                OneForce
+            </h1>
+            
+            <!-- Tagline -->
+            <p class="text-xl md:text-3xl font-bold mb-12 text-[#2EC4B6] opacity-90">AI Disaster Planner & Emergency Response System</p>
+
+            <button onclick="navigateTo('dashboard')" class="w-full max-w-sm bg-[#E63946] hover:bg-red-600 text-white text-2xl font-extrabold py-5 px-12 rounded-2xl shadow-[0_10px_30px_rgba(230,57,70,0.6)] transition duration-300 transform hover:scale-[1.05] active:scale-95 uppercase tracking-wider">
+                Start Emergency Simulation
+            </button>
+            <!-- Removed the old SVG icon to use the main logo instead -->
+        </div>
+
+        <!-- Screen 2: Dashboard / Emergency Screen -->
+        <div id="screen-dashboard" data-screen="dashboard" class="screen hidden flex-col items-center justify-center text-center relative">
+            <h2 class="text-4xl md:text-5xl font-extrabold mb-16 text-white uppercase tracking-wider">CONTROL PANEL</h2>
+
+            <button id="activate-button" onclick="showActivationOptions()" class="w-full max-w-sm bg-[#E63946] hover:bg-red-600 text-white text-3xl font-black py-8 px-16 rounded-3xl shadow-[0_15px_40px_rgba(230,57,70,0.8)] transition duration-300 animate-pulse hover:animate-none transform hover:scale-[1.05] active:scale-95 uppercase">
+                Activate Emergency
+            </button>
+
+            <p class="mt-8 text-lg text-gray-400 font-medium">Initiate drone launch and evacuation protocol now.</p>
+            
+            <!-- NEW: Activation Options Modal -->
+            <div id="activation-options-modal" class="hidden fixed inset-0 bg-black/80 z-40 flex items-center justify-center p-4">
+                <div class="bg-[#14141d] p-6 rounded-2xl max-w-md w-full border-4 border-[#2EC4B6] shadow-[0_0_50px_rgba(46,196,182,0.6)]">
+                    <h3 class="text-3xl font-black mb-6 text-white uppercase">Activation Mode</h3>
+                    <p class="text-gray-300 mb-8">Select the operational mode before proceeding.</p>
+
+                    <!-- Real Emergency Button -->
+                    <button onclick="handleActivation('real')" class="w-full mb-4 bg-[#E63946] hover:bg-red-700 text-white text-xl font-extrabold py-4 rounded-xl shadow-lg transition duration-200 uppercase transform hover:scale-[1.02] border-b-4 border-red-900">
+                        <span class="animate-pulse">🔴 REAL EMERGENCY</span>
+                    </button>
+
+                    <!-- Simulation Button -->
+                    <button onclick="handleActivation('simulation')" class="w-full mb-6 bg-gray-700 hover:bg-gray-600 text-white text-xl font-bold py-4 rounded-xl shadow-md transition duration-200 uppercase">
+                        Simulation Mode
+                    </button>
+                    
+                    <button onclick="closeActivationOptions()" class="w-full text-gray-400 hover:text-gray-100 mt-4 text-sm font-medium">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+            <!-- END NEW: Activation Options Modal -->
+        </div>
+
+        <!-- Screen 3: Evacuation Map -->
+        <div id="screen-map" data-screen="map" class="screen hidden flex-col w-full">
+            <h2 class="text-3xl font-bold mb-4 text-[#2EC4B6] uppercase tracking-wide">Guidance Map</h2>
+            <div class="map-container relative bg-[#F5F5F5] overflow-hidden">
+                <!-- Placeholder for Floorplan Image -->
+                <img src="https://placehold.co/800x600/1E1E2F/808080?text=SECURED+ZONE" alt="Building Floorplan" class="floorplan-img">
+
+                <!-- User Location Label -->
+                <div id="user-location-marker" class="absolute w-28 p-2 bg-[#FFA500] text-black text-xs font-black rounded-lg shadow-lg text-center border-2 border-white uppercase" style="left: 10%; top: 75%;">
+                    YOU ARE HERE
+                </div>
+
+                <!-- Canvas for Route and Hazards -->
+                <canvas id="routeCanvas" class="route-canvas"></canvas>
+            </div>
+
+            <!-- Current Voice Instruction -->
+            <p id="current-instruction" class="mt-6 p-3 bg-[#14141d] rounded-xl text-xl font-bold text-center text-yellow-400 border-l-4 border-yellow-400 shadow-lg">
+                Awaiting instructions...
+            </p>
+
+            <!-- Hazard Controls (Styled as a control panel) -->
+            <div class="mt-6 flex flex-wrap justify-between gap-3 p-4 bg-[#14141d] rounded-xl shadow-inner border border-gray-700">
+                <p class="w-full text-center text-md font-bold text-gray-300 mb-2 uppercase tracking-wide">AI Hazard Simulation</p>
+                <button onclick="simulateHazard('fire')" class="hazard-btn w-[48%] bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-md transition duration-150">
+                    FIRE
+                </button>
+                <button onclick="simulateHazard('flood')" class="hazard-btn w-[48%] bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition duration-150">
+                    FLOOD
+                </button>
+                <button onclick="simulateHazard('clear')" class="hazard-btn w-full mt-3 bg-[#2EC4B6] hover:bg-teal-600 text-white font-bold py-3 rounded-xl shadow-md transition duration-150 uppercase">
+                    Clear Hazards
+                </button>
+            </div>
+            <button onclick="navigateTo('drone-status')" class="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition duration-150 uppercase">
+                View Drone Status
+            </button>
+        </div>
+
+        <!-- Screen 4: Drone Status -->
+        <div id="screen-drone-status" data-screen="drone-status" class="screen hidden flex-col items-center justify-center text-center">
+            <h2 class="text-4xl md:text-5xl font-extrabold mb-12 text-[#2EC4B6] uppercase tracking-wider">Watcher Drone</h2>
+
+            <!-- Drone Animation / Icon -->
+            <div class="relative mb-8 p-8 bg-[#14141d] rounded-full shadow-2xl border-4 border-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-36 h-36 text-gray-400 animate-[pulse_2s_infinite_ease-in-out]">
+                    <path fill-rule="evenodd" d="M12.923 2.25c-5.594-.66-10.231 2.37-10.231 6.375s4.637 7.035 10.23 6.375v4.5c0 1.517 1.157 2.75 2.583 2.75s2.583-1.233 2.583-2.75V15c5.593-.66 10.23-3.69 10.23-6.375S18.515 2.91 12.923 2.25Zm0 1.5c4.637.548 8.16 3.09 8.16 5.25s-3.523 4.702-8.16 5.25V3.75Z" clip-rule="evenodd" />
+                    <path d="M14.773 17.5a.75.75 0 0 0-.75-.75h-3.046a.75.75 0 0 0-.75.75v.75a.75.75 0 0 0 .75.75h3.046a.75.75 0 0 0 .75-.75v-.75Z" />
+                    <path fill-rule="evenodd" d="M12 4.125a.75.75 0 0 1 .75.75v.75a.75.75 0 0 1-1.5 0v-.75a.75.75 0 0 1 .75-.75ZM12 16.5a.75.75 0 0 0-.75.75v.75a.75.75 0 0 0 1.5 0v-.75a.75.75 0 0 0-.75-.75Z" clip-rule="evenodd" />
+                </svg>
+                <!-- LED Simulation Circle -->
+                <div id="drone-led" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-green-500 shadow-[0_0_15px_rgba(34,197,94,1)] animate-pulse"></div>
+            </div>
+
+            <p id="drone-status-text" class="text-2xl font-semibold text-white mb-12 uppercase">
+                Scanning hazard area. Guidance activated.
+            </p>
+
+            <button onclick="navigateTo('map')" class="w-full max-w-xs bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition duration-150 uppercase">
+                Return to Evacuation Map
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Global Constants
+        const ARDUINO_URL = 'http://192.168.1.100/activate_drone'; // Placeholder URL
+        const SCREEN_IDS = ['screen-intro', 'screen-dashboard', 'screen-map', 'screen-drone-status'];
+
+        // DOM Elements
+        const notifier = document.getElementById('notifier');
+        const instructionText = document.getElementById('current-instruction');
+        const canvas = document.getElementById('routeCanvas');
+        const ctx = canvas.getContext('2d');
+        const activationModal = document.getElementById('activation-options-modal');
+
+        // TTS setup
+        const speech = window.speechSynthesis;
+        let voice;
+        // Function to set voice once loaded
+        const setVoice = () => {
+            voice = speech.getVoices().find(v => v.lang.startsWith('en')) || speech.getVoices()[0];
+        };
+
+        // State Variables
+        let currentHazard = 'none'; // 'none', 'fire', or 'flood'
+        // Map data: Coordinates (x, y) based on a 800x600 internal canvas scale
+        const mapScaleX = 800;
+        const mapScaleY = 600;
+        const startPoint = { x: 80, y: 450 }; // User location
+        const exitPoint = { x: 750, y: 150 }; // Nearest exit
+
+        // Base route without hazards (Path A: Straight line, Path B: Longer route)
+        const pathA = [startPoint, exitPoint];
+        const pathB = [startPoint, { x: 150, y: 50 }, { x: 700, y: 50 }, exitPoint];
+
+        // --- Core Functions ---
+
+        /**
+         * Converts base coordinates to canvas coordinates (responsive).
+         * @param {number} base_x - X coordinate from 800-width map.
+         * @param {number} base_y - Y coordinate from 600-height map.
+         * @returns {{x: number, y: number}} Scaled coordinates.
+         */
+        function scaleCoords(base_x, base_y) {
+            const container = canvas.parentElement;
+            const width = container.offsetWidth;
+            const height = container.offsetHeight;
+
+            return {
+                x: (base_x / mapScaleX) * width,
+                y: (base_y / mapScaleY) * height
+            };
+        }
+
+        /**
+         * Updates canvas dimensions and redraws content on resize.
+         */
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+
+            // Only redraw if the map screen is visible
+            if (document.getElementById('screen-map').classList.contains('hidden') === false) {
+                drawMap();
+            }
+            // Move user marker to scaled position
+            const scaledStart = scaleCoords(startPoint.x, startPoint.y);
+            const marker = document.getElementById('user-location-marker');
+            marker.style.left = `${scaledStart.x - (marker.offsetWidth / 2)}px`;
+            marker.style.top = `${scaledStart.y - marker.offsetHeight}px`;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+
+        /**
+         * Handles screen navigation.
+         * @param {string} screenId - The data-screen identifier.
+         */
+        function navigateTo(screenId) {
+            SCREEN_IDS.forEach(id => {
+                const screen = document.getElementById(id);
+                if (screen) {
+                    screen.classList.add('hidden');
+                    screen.classList.remove('flex');
+                }
+            });
+
+            const nextScreen = document.getElementById(`screen-${screenId}`);
+            if (nextScreen) {
+                nextScreen.classList.remove('hidden');
+                nextScreen.classList.add('flex');
+            }
+
+            if (screenId === 'map') {
+                resizeCanvas(); // Ensure canvas is sized correctly
+                // Initial route calculation
+                recalculateRoute(currentHazard);
+            }
+            if (screenId === 'drone-status') {
+                speak("Drone scanning hazard area. Guidance activated.");
+            }
+        }
+
+
+        /**
+         * Displays a temporary alert notification.
+         * @param {string} message - The message to display.
+         * @param {string} [type='orange'] - Color class ('orange' or 'red').
+         */
+        function showNotifier(message, type = 'orange') {
+            notifier.textContent = message;
+            notifier.classList.remove('bg-[#E63946]', 'bg-[#FFA500]');
+            notifier.classList.add(type === 'red' ? 'bg-[#E63946]' : 'bg-[#FFA500]');
+
+            notifier.classList.remove('-translate-y-full');
+            setTimeout(() => {
+                notifier.classList.add('-translate-y-full');
+            }, 5000);
+        }
+
+        /**
+         * Uses the Web Speech API to speak a message.
+         * @param {string} text - The text to speak.
+         */
+        function speak(text) {
+            if (!voice) {
+                setVoice();
+            }
+            if (speech.speaking) {
+                speech.cancel();
+            }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = voice;
+            utterance.pitch = 1;
+            utterance.rate = 1.1;
+            speech.speak(utterance);
+
+            // Update UI instruction
+            instructionText.textContent = text;
+        }
+
+
+        // --- Screen 2 Logic ---
+
+        /**
+         * Shows the modal for choosing activation mode.
+         */
+        function showActivationOptions() {
+            activationModal.classList.remove('hidden');
+        }
+
+        /**
+         * Closes the modal for choosing activation mode.
+         */
+        function closeActivationOptions() {
+            activationModal.classList.add('hidden');
+        }
+        
+        /**
+         * Handles the user's choice of activation mode.
+         * @param {string} mode - 'real' or 'simulation'.
+         */
+        function handleActivation(mode) {
+            closeActivationOptions();
+            startEmergencyFlow(mode);
+        }
+
+        /**
+         * Simulates sending a command to the Arduino and initiates the emergency flow.
+         * @param {string} mode - 'real' or 'simulation'.
+         */
+        async function startEmergencyFlow(mode) {
+            // Disable button during activation
+            const button = document.getElementById('activate-button');
+            button.disabled = true;
+            button.textContent = 'ACTIVATING...';
+            button.classList.remove('animate-pulse');
+
+            let introMsg;
+            let activationText;
+
+            if (mode === 'real') {
+                introMsg = 'REAL EMERGENCY. Activating full evacuation protocol. Move to the nearest exit immediately.';
+                activationText = 'Full System Activated. Evacuation route calculated.';
+            } else { // simulation
+                introMsg = 'Emergency simulation initiated. Activating evacuation protocol. Evacuate immediately.';
+                activationText = 'Drone Activated (Simulation). Evacuation route calculated.';
+            }
+
+
+            // 1. Send simulated HTTP GET to Arduino
+            try {
+                console.log(`Attempting to send GET request to Arduino at: ${ARDUINO_URL}`);
+                // const response = await fetch(ARDUINO_URL); // Commented out to prevent CORS errors in environment
+
+                // Simulate success after a delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                showNotifier(activationText, mode === 'real' ? 'red' : 'orange');
+                console.log('System activation simulated successfully in mode: ' + mode);
+
+            } catch (error) {
+                // Handle expected network/CORS error for local hardware
+                showNotifier('System Activation Attempted. Proceeding with guidance.', 'red');
+                console.warn('Network error (expected in simulation). Proceeding...');
+            }
+
+            // 2. TTS Announcement
+            speak(introMsg);
+            
+            // NEW: Announce drone ETA after the initial alert
+            setTimeout(() => {
+                speak("Drone deployed. Estimated time of arrival to your location is 1 minute.");
+            }, 3000); // Wait 3 seconds to avoid interrupting the main alert
+
+            // 3. Navigate flow: Dashboard -> Drone Status (briefly) -> Map
+            setTimeout(() => navigateTo('drone-status'), 1500);
+            setTimeout(() => {
+                navigateTo('map'); // Return to map for immediate guidance
+                button.disabled = false;
+                button.textContent = 'Activate Emergency';
+            }, 5000);
+        }
+
+        // --- Screen 3 Logic ---
+
+        /**
+         * Clears the canvas and draws the current evacuation route and hazards.
+         */
+        function drawMap() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let route;
+            let instructions;
+            let hazardRects = [];
+
+            // Determine the route based on the current hazard state
+            switch (currentHazard) {
+                case 'fire':
+                    // Path A blocked near the exit, switch to Path B
+                    route = pathB;
+                    instructions = [
+                        "ALERT! Fire detected at main exit. Route diverted! Turn immediately North towards the rear staircase. Remain calm.",
+                        "Proceed North past the lobby, then turn East into the administrative wing.",
+                        "Follow the long path to Alternate Exit Two."
+                    ];
+                    // Simulate fire hazard blocking exit (Top-right corner)
+                    hazardRects.push({ x: 700, y: 100, w: 100, h: 100, label: 'FIRE ZONE' });
+                    break;
+                case 'flood':
+                    // Path B blocked mid-way, switch to Path A
+                    route = pathA;
+                    instructions = [
+                        "WARNING! Flood detected in the North wing. Route is safe. Turn left immediately toward the central corridor.",
+                        "Proceed straight ahead on the central corridor.",
+                        "The main exit is 20 meters ahead."
+                    ];
+                    // Simulate flood hazard blocking mid-path (near 700, 50)
+                    hazardRects.push({ x: 600, y: 0, w: 150, h: 100, label: 'FLOOD' });
+                    break;
+                case 'clear':
+                case 'none':
+                default:
+                    route = pathA;
+                    instructions = [
+                        // UPDATED: Clear, reassuring first instruction with direction
+                        "Don't worry, the path is safe. We have confirmed the optimal route to the main exit. Please proceed straight down the current corridor.",
+                        "Continue straight for 30 meters. Do not take any turns.",
+                        "The main exit is now directly ahead. Move quickly and calmly."
+                    ];
+                    break;
+            }
+
+            // Draw Route (Green Line)
+            ctx.beginPath();
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = '#2EC4B6'; // Green
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.shadowColor = '#2EC4B6';
+            ctx.shadowBlur = 10; // Glowing effect
+
+            route.forEach((point, index) => {
+                const scaledPoint = scaleCoords(point.x, point.y);
+                if (index === 0) {
+                    ctx.moveTo(scaledPoint.x, scaledPoint.y);
+                } else {
+                    ctx.lineTo(scaledPoint.x, scaledPoint.y);
+                }
+            });
+            ctx.stroke();
+            ctx.shadowBlur = 0; // Reset shadow for other elements
+
+            // Draw Route Arrows (simplified: one arrow per segment)
+            for (let i = 0; i < route.length - 1; i++) {
+                const p1 = scaleCoords(route[i].x, route[i].y);
+                const p2 = scaleCoords(route[i + 1].x, route[i + 1].y);
+                drawArrow(p1, p2, 16, '#2EC4B6'); // Draw a larger arrow on the path segment
+            }
+
+            // Draw Hazards (Semi-transparent Red)
+            hazardRects.forEach(hazard => {
+                const scaledStart = scaleCoords(hazard.x, hazard.y);
+                const scaledEnd = scaleCoords(hazard.x + hazard.w, hazard.y + hazard.h);
+                const scaledW = scaledEnd.x - scaledStart.x;
+                const scaledH = scaledEnd.y - scaledStart.y;
+
+                ctx.fillStyle = 'rgba(230, 57, 70, 0.7)'; // Semi-transparent Red (#E63946)
+                ctx.fillRect(scaledStart.x, scaledStart.y, scaledW, scaledH);
+
+                // Add flashing hazard label
+                ctx.fillStyle = (Math.floor(Date.now() / 500) % 2 === 0) ? '#FFFFFF' : '#FFD700'; // Flashing text
+                ctx.font = 'bolder 18px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(hazard.label, scaledStart.x + scaledW / 2, scaledStart.y + scaledH / 2);
+            });
+
+            // Draw Exit Marker (Prominent)
+            const scaledExit = scaleCoords(exitPoint.x, exitPoint.y);
+            ctx.fillStyle = '#E63946';
+            ctx.shadowColor = '#E63946';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(scaledExit.x, scaledExit.y, 20, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 16px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('EXIT', scaledExit.x, scaledExit.y + 5);
+
+            // Start TTS guidance with the first instruction
+            if (instructions.length > 0) {
+                speak(instructions[0]);
+            }
+        }
+
+        /**
+         * Draws an arrow head on a canvas line segment.
+         * @param {{x: number, y: number}} p1 - Start point.
+         * @param {{x: number, y: number}} p2 - End point.
+         * @param {number} size - Size of the arrowhead.
+         * @param {string} color - Color of the arrowhead.
+         */
+        function drawArrow(p1, p2, size, color) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Draw arrow head only if segment is long enough
+            if (dist > size * 2) {
+                const centerP = {
+                    x: p1.x + dx * 0.5,
+                    y: p1.y + dy * 0.5
+                };
+
+                ctx.save();
+                ctx.translate(centerP.x, centerP.y);
+                ctx.rotate(angle);
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(-size, -size / 2);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(-size, size / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        /**
+         * Simulates a hazard event and triggers route recalculation.
+         * @param {string} hazardType - 'fire', 'flood', or 'clear'.
+         */
+        function simulateHazard(hazardType) {
+            currentHazard = hazardType;
+            let message = '';
+
+            switch (hazardType) {
+                case 'fire':
+                    message = 'WARNING: Fire detected near Main Exit! Route is being recalculated.';
+                    break;
+                case 'flood':
+                    message = 'ALERT: Flood detected on the long path. Route diverted.';
+                    break;
+                case 'clear':
+                    message = 'Hazards Cleared. Proceeding with the original safe route.';
+                    break;
+            }
+
+            showNotifier(message, hazardType === 'clear' ? 'orange' : 'red');
+            recalculateRoute(hazardType);
+        }
+
+        /**
+         * Recalculates the route based on hazard.
+         */
+        function recalculateRoute(hazardType) {
+            drawMap();
+        }
+
+        // Global animation loop for visual effects (like flashing hazards)
+        function animate() {
+            requestAnimationFrame(animate);
+            if (document.getElementById('screen-map').classList.contains('hidden') === false) {
+                // Redraw map periodically to simulate flashing hazards
+                drawMap();
+            }
+        }
+
+
+        // Initialize the app on the intro screen and ensure canvas is ready
+        window.onload = () => {
+            // Load voices, then start the animation loop
+            if (speech.onvoiceschanged !== undefined) {
+                speech.onvoiceschanged = setVoice;
+            } else {
+                setVoice();
+            }
+
+            navigateTo('intro');
+            animate(); // Start the animation loop for flashing hazards and general updates
+        };
+
+    </script>
+</body>
+</html>
+
