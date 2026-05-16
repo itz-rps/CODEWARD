@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codeward - Know Your Code Before You Ship It</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0f;
+            color: #f8fafc;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            border-top: 2px solid;
+            border-image: linear-gradient(90deg, #6366f1, #8b5cf6) 1;
+            padding: 1.5rem 2rem;
+            background: #12121a;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            transform: rotate(45deg);
+            border-radius: 4px;
+        }
+
+        .tagline {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+
+        /* Hero Section */
+        .hero {
+            max-width: 800px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #f8fafc, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            margin-bottom: 3rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .repo-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            background: #12121a;
+            border: 2px solid #1e1e2e;
+            border-radius: 12px;
+            color: #f8fafc;
+            transition: all 0.3s ease;
+        }
+
+        .repo-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        }
+
+        .analyze-btn:active {
+            transform: translateY(0);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .example-repos {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .example-repos a {
+            color: #6366f1;
+            text-decoration: none;
+            margin: 0 0.5rem;
+        }
+
+        .example-repos a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            border-radius: 8px;
+            color: #ef4444;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Loading State */
+        .loading {
+            max-width: 600px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 2rem;
+            border: 4px solid #1e1e2e;
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-steps {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #1e1e2e;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 2rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            width: 0%;
+            transition: width 0.8s ease;
+        }
+
+        /* Report Section */
+        .report {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 2rem 4rem;
+        }
+
+        .report-card {
+            background: #12121a;
+            border: 1px solid #1e1e2e;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .report-card:nth-child(1) { animation-delay: 0s; }
+        .report-card:nth-child(2) { animation-delay: 0.15s; }
+        .report-card:nth-child(3) { animation-delay: 0.3s; }
+        .report-card:nth-child(4) { animation-delay: 0.45s; }
+        .report-card:nth-child(5) { animation-delay: 0.6s; }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        /* Overview Card */
+        .repo-name {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .repo-description {
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+        }
+
+        .badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            background: #1e1e2e;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge-label {
+            color: #64748b;
+        }
+
+        .badge-value {
+            color: #f8fafc;
+            font-weight: 600;
+        }
+
+        /* Summary Card */
+        .summary-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #cbd5e1;
+        }
+
+        /* Risk Score Card */
+        .risk-score-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .risk-ring {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+
+        .risk-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .risk-ring-bg {
+            fill: none;
+            stroke: #1e1e2e;
+            stroke-width: 12;
+        }
+
+        .risk-ring-progress {
+            fill: none;
+            stroke-width: 12;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease;
+        }
+
+        .risk-score-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .risk-score-number {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+
+        .risk-score-label {
+            font-size: 1rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        .risk-level {
+            font-size: 1.25rem;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+        }
+
+        .risk-low {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+
+        .risk-medium {
+            background: rgba(234, 179, 8, 0.1);
+            color: #eab308;
+        }
+
+        .risk-high {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        /* Red Flags Card */
+        .flags-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .flag-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: #1e1e2e;
+            border-radius: 8px;
+            border-left: 3px solid;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .flag-item.critical {
+            border-color: #ef4444;
+        }
+
+        .flag-item.warning {
+            border-color: #eab308;
+        }
+
+        .flag-item.info {
+            border-color: #6366f1;
+        }
+
+        .flag-item.success {
+            border-color: #22c55e;
+        }
+
+        .flag-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .flag-item.critical .flag-dot {
+            background: #ef4444;
+        }
+
+        .flag-item.warning .flag-dot {
+            background: #eab308;
+        }
+
+        .flag-item.info .flag-dot {
+            background: #6366f1;
+        }
+
+        .flag-item.success .flag-dot {
+            background: #22c55e;
+        }
+
+        .flag-content {
+            flex: 1;
+        }
+
+        .flag-message {
+            color: #cbd5e1;
+            margin-bottom: 0.25rem;
+        }
+
+        .flag-severity {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .flag-item.critical .flag-severity {
+            color: #ef4444;
+        }
+
+        .flag-item.warning .flag-severity {
+            color: #eab308;
+        }
+
+        .flag-item.info .flag-severity {
+            color: #6366f1;
+        }
+
+        .flag-item.success .flag-severity {
+            color: #22c55e;
+        }
+
+        /* Verdict Card */
+        .verdict-card {
+            text-align: center;
+            padding: 3rem 2rem;
+            animation: pulse 0.5s ease;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .verdict-card.safe {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+            border-color: #22c55e;
+        }
+
+        .verdict-card.review {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(234, 179, 8, 0.05));
+            border-color: #eab308;
+        }
+
+        .verdict-card.danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+            border-color: #ef4444;
+        }
+
+        .verdict-badge {
+            display: inline-block;
+            font-size: 2rem;
+            font-weight: 700;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .verdict-card.safe .verdict-badge {
+            background: #22c55e;
+            color: white;
+        }
+
+        .verdict-card.review .verdict-badge {
+            background: #eab308;
+            color: white;
+        }
+
+        .verdict-card.danger .verdict-badge {
+            background: #ef4444;
+            color: white;
+        }
+
+        .verdict-advice {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin-bottom: 2rem;
+        }
+
+        .analyze-another-btn {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            background: #1e1e2e;
+            border: 2px solid #6366f1;
+            border-radius: 8px;
+            color: #6366f1;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .analyze-another-btn:hover {
+            background: #6366f1;
+            color: white;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #64748b;
+            border-top: 1px solid #1e1e2e;
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .tagline {
+                display: none;
+            }
+
+            .badges {
+                flex-direction: column;
+            }
+
+            .risk-ring {
+                width: 150px;
+                height: 150px;
+            }
+
+            .risk-score-number {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <span>Codeward</span>
+            </div>
+            <div class="tagline">Know your code before you ship it</div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero">
+        <h1>Trust Your Code.</h1>
+        <p>Paste any GitHub repo URL and get an instant trust report — no coding knowledge required.</p>
+        
+        <div class="input-group">
+            <input 
+                type="text" 
+                id="repoInput" 
+                class="repo-input" 
+                placeholder="https://github.com/username/repository"
+                autocomplete="off"
+            >
+        </div>
+        
+        <button id="analyzeBtn" class="analyze-btn">Analyze Repository</button>
+        
+        <div id="errorMessage" class="error-message hidden"></div>
+        
+        <div class="example-repos">
+            Try:
+            <a href="#" data-repo="https://github.com/torvalds/linux">torvalds/linux</a>
+            <a href="#" data-repo="https://github.com/facebook/react">facebook/react</a>
+            <a href="#" data-repo="https://github.com/microsoft/vscode">microsoft/vscode</a>
+        </div>
+    </section>
+
+    <!-- Loading State -->
+    <section id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <div id="loadingSteps" class="loading-steps">Fetching repository...</div>
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+    </section>
+
+    <!-- Report Section -->
+    <section id="report" class="report hidden">
+        <!-- Overview Card -->
+        <div class="report-card">
+            <div class="repo-name" id="repoName"></div>
+            <div class="repo-description" id="repoDescription"></div>
+            <div class="badges" id="repoBadges"></div>
+        </div>
+
+        <!-- Summary Card -->
+        <div class="report-card">
+            <div class="card-header">
+                <div class="card-icon">📄</div>
+                <div class="card-title">What does this code do?</div>
+            </div>
+            <div class="summary-text" id="summaryText"></div>
+        </div>
+
+        <!-- Risk Score Card -->
+        <div class="report-card">
+            <div class="card-header">
+                <div class="card-icon">🛡️</div>
+                <div class="card-title">Risk Score</div>
+            </div>
+            <div class="risk-score-container">
+                <div class="risk-ring">
+                    <svg width="200" height="200">
+                        <circle class="risk-ring-bg" cx="100" cy="100" r="90"></circle>
+                        <circle id="riskRingProgress" class="risk-ring-progress" cx="100" cy="100" r="90"></circle>
+                    </svg>
+                    <div class="risk-score-text">
+                        <div class="risk-score-number" id="riskScoreNumber">0</div>
+                        <div class="risk-score-label">Risk Score</div>
+                    </div>
+                </div>
+                <div id="riskLevel" class="risk-level"></div>
+            </div>
+        </div>
+
+        <!-- Red Flags Card -->
+        <div class="report-card">
+            <div class="card-header">
+                <div class="card-icon">⚠️</div>
+                <div class="card-title">Issues Found</div>
+            </div>
+            <div id="flagsList" class="flags-list"></div>
+        </div>
+
+        <!-- Verdict Card -->
+        <div id="verdictCard" class="report-card verdict-card">
+            <div id="verdictBadge" class="verdict-badge"></div>
+            <div id="verdictAdvice" class="verdict-advice"></div>
+            <button id="analyzeAnotherBtn" class="analyze-another-btn">Analyze Another Repo</button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>Powered by <strong>IBM Bob</strong></p>
+        <p>Built at IBM Bob Hackathon 2026</p>
+        <p><a href="https://github.com" target="_blank">View on GitHub</a></p>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const heroSection = document.getElementById('hero');
+        const loadingSection = document.getElementById('loading');
+        const reportSection = document.getElementById('report');
+        const repoInput = document.getElementById('repoInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingSteps = document.getElementById('loadingSteps');
+        const progressFill = document.getElementById('progressFill');
+        const analyzeAnotherBtn = document.getElementById('analyzeAnotherBtn');
+
+        // Loading steps
+        const steps = [
+            'Fetching repository...',
+            'Reading file structure...',
+            'Scanning code patterns...',
+            'Generating trust report...'
+        ];
+
+        // Event Listeners
+        analyzeBtn.addEventListener('click', handleAnalyze);
+        analyzeAnotherBtn.addEventListener('click', resetToHero);
+        repoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleAnalyze();
+        });
+
+        // Example repo links
+        document.querySelectorAll('[data-repo]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                repoInput.value = e.target.dataset.repo;
+                handleAnalyze();
+            });
+        });
+
+        // Main analyze function
+        async function handleAnalyze() {
+            const repoUrl = repoInput.value.trim();
+            
+            // Validate URL
+            if (!repoUrl) {
+                showError('Please enter a GitHub repository URL');
+                return;
+            }
+
+            if (!repoUrl.startsWith('https://github.com/')) {
+                showError('Please enter a valid GitHub repository URL');
+                return;
+            }
+
+            // Hide error and show loading
+            hideError();
+            showLoading();
+
+            try {
+                // Simulate loading steps
+                let currentStep = 0;
+                const stepInterval = setInterval(() => {
+                    if (currentStep < steps.length) {
+                        loadingSteps.textContent = steps[currentStep];
+                        progressFill.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
+                        currentStep++;
+                    }
+                }, 800);
+
+                // Call backend API
+                const response = await fetch('http://localhost:3000/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ repoUrl })
+                });
+
+                clearInterval(stepInterval);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Analysis failed');
+                }
+
+                const data = await response.json();
+                displayReport(data);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                hideLoading();
+                showHero();
+                showError(error.message || 'Failed to analyze repository. Please try again.');
+            }
+        }
+
+        // Display report
+        function displayReport(data) {
+            // Overview
+            document.getElementById('repoName').textContent = data.overview.fullName;
+            document.getElementById('repoDescription').textContent = data.overview.description;
+            
+            const badges = document.getElementById('repoBadges');
+            badges.innerHTML = `
+                <div class="badge">
+                    <span class="badge-label">Language:</span>
+                    <span class="badge-value">${data.overview.language}</span>
+                </div>
+                <div class="badge">
+                    <span class="badge-label">⭐</span>
+                    <span class="badge-value">${data.overview.stars.toLocaleString()}</span>
+                </div>
+                <div class="badge">
+                    <span class="badge-label">🔱</span>
+                    <span class="badge-value">${data.overview.forks.toLocaleString()}</span>
+                </div>
+                <div class="badge">
+                    <span class="badge-label">Files:</span>
+                    <span class="badge-value">${data.overview.fileCount}</span>
+                </div>
+                <div class="badge">
+                    <span class="badge-label">Updated:</span>
+                    <span class="badge-value">${formatDate(data.overview.lastUpdated)}</span>
+                </div>
+            `;
+
+            // Summary
+            document.getElementById('summaryText').textContent = data.summary;
+
+            // Risk Score
+            displayRiskScore(data.riskScore);
+
+            // Red Flags
+            displayRedFlags(data.redFlags);
+
+            // Verdict
+            displayVerdict(data.verdict, data.verdictAdvice);
+
+            // Show report
+            hideLoading();
+            showReport();
+        }
+
+        // Display risk score with animation
+        function displayRiskScore(score) {
+            const scoreNumber = document.getElementById('riskScoreNumber');
+            const riskLevel = document.getElementById('riskLevel');
+            const ringProgress = document.getElementById('riskRingProgress');
+
+            // Determine risk level and color
+            let level, levelClass, color;
+            if (score <= 30) {
+                level = 'Low Risk';
+                levelClass = 'risk-low';
+                color = '#22c55e';
+            } else if (score <= 60) {
+                level = 'Medium Risk';
+                levelClass = 'risk-medium';
+                color = '#eab308';
+            } else {
+                level = 'High Risk';
+                levelClass = 'risk-high';
+                color = '#ef4444';
+            }
+
+            // Animate score
+            let currentScore = 0;
+            const increment = score / 50;
+            const scoreInterval = setInterval(() => {
+                currentScore += increment;
+                if (currentScore >= score) {
+                    currentScore = score;
+                    clearInterval(scoreInterval);
+                }
+                scoreNumber.textContent = Math.round(currentScore);
+            }, 20);
+
+            // Set ring progress
+            const circumference = 2 * Math.PI * 90;
+            const offset = circumference - (score / 100) * circumference;
+            ringProgress.style.strokeDasharray = circumference;
+            ringProgress.style.strokeDashoffset = circumference;
+            ringProgress.style.stroke = color;
+            
+            setTimeout(() => {
+                ringProgress.style.strokeDashoffset = offset;
+            }, 100);
+
+            // Set level
+            riskLevel.textContent = level;
+            riskLevel.className = `risk-level ${levelClass}`;
+        }
+
+        // Display red flags
+        function displayRedFlags(flags) {
+            const flagsList = document.getElementById('flagsList');
+            flagsList.innerHTML = '';
+
+            flags.forEach((flag, index) => {
+                const flagItem = document.createElement('div');
+                flagItem.className = `flag-item ${flag.severity}`;
+                flagItem.style.animationDelay = `${index * 0.1}s`;
+                flagItem.innerHTML = `
+                    <div class="flag-dot"></div>
+                    <div class="flag-content">
+                        <div class="flag-message">${flag.message}</div>
+                        <div class="flag-severity">${flag.severity}</div>
+                    </div>
+                `;
+                flagsList.appendChild(flagItem);
+            });
+        }
+
+        // Display verdict
+        function displayVerdict(verdict, advice) {
+            const verdictCard = document.getElementById('verdictCard');
+            const verdictBadge = document.getElementById('verdictBadge');
+            const verdictAdvice = document.getElementById('verdictAdvice');
+
+            verdictBadge.textContent = verdict;
+            verdictAdvice.textContent = advice;
+
+            // Set card style based on verdict
+            verdictCard.classList.remove('safe', 'review', 'danger');
+            if (verdict === 'SAFE TO SHIP') {
+                verdictCard.classList.add('safe');
+            } else if (verdict === 'NEEDS REVIEW') {
+                verdictCard.classList.add('review');
+            } else {
+                verdictCard.classList.add('danger');
+            }
+        }
+
+        // UI State Management
+        function showLoading() {
+            heroSection.classList.add('hidden');
+            reportSection.classList.add('hidden');
+            loadingSection.classList.remove('hidden');
+            progressFill.style.width = '0%';
+        }
+
+        function hideLoading() {
+            loadingSection.classList.add('hidden');
+        }
+
+        function showHero() {
+            heroSection.classList.remove('hidden');
+            reportSection.classList.add('hidden');
+        }
+
+        function showReport() {
+            heroSection.classList.add('hidden');
+            reportSection.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetToHero() {
+            repoInput.value = '';
+            hideError();
+            showHero();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        // Utility function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 30) {
+                return `${diffDays}d ago`;
+            } else if (diffDays < 365) {
+                return `${Math.floor(diffDays / 30)}mo ago`;
+            } else {
+                return `${Math.floor(diffDays / 365)}y ago`;
+            }
+        }
+
+        // Console welcome message
+        console.log('%cCodeward', 'font-size: 24px; font-weight: bold; color: #6366f1;');
+        console.log('%cKnow your code before you ship it', 'font-size: 14px; color: #94a3b8;');
+    </script>
+</body>
+</html>
