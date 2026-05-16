@@ -471,6 +471,9 @@
         .verdict-card {
             text-align: center;
             padding: 3rem 2rem;
+        }
+
+        .verdict-card.pulse-animation {
             animation: pulse 0.5s ease;
         }
 
@@ -932,6 +935,11 @@
             } else {
                 verdictCard.classList.add('danger');
             }
+
+            // Add pulse animation after fade-in completes
+            setTimeout(() => {
+                verdictCard.classList.add('pulse-animation');
+            }, 1100); // Wait for fade-in (600ms delay + 500ms animation)
         }
 
         // UI State Management
