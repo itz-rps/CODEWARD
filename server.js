@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 // Groq AI Configuration
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'mixtral-8x7b-32768';
+const GROQ_MODEL = 'llama-3.1-8b-instant'; // Current supported Groq model
 
 /**
  * Call Groq AI API
@@ -43,7 +43,7 @@ async function callGroq(systemPrompt, userMessage) {
     
     return response.data.choices[0].message.content;
   } catch (error) {
-    console.error('Groq API error:', error.message);
+    console.error('Groq API error:', error.response?.data || error.message);
     throw error;
   }
 }
