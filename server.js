@@ -12,6 +12,42 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Groq AI Configuration
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'mixtral-8x7b-32768';
+
+/**
+ * Call Groq AI API
+ */
+async function callGroq(systemPrompt, userMessage) {
+  if (!GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY not configured');
+  }
+  
+  try {
+    const response = await axios.post(GROQ_URL, {
+      model: GROQ_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      max_tokens: 500,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    console.error('Groq API error:', error.message);
+    throw error;
+  }
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -854,6 +890,89 @@ function determineVerdict(score) {
     };
   }
 }
+
+// Chat endpoint for repo questions
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, repoContext } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    
+    const systemPrompt = `You are Bob, an expert code analyst who analyzed this GitHub repository: ${repoContext || 'a repository'}. Answer questions in plain English for non-technical users. Be helpful, clear, and slightly witty. Keep answers under 150 words.`;
+    
+    const reply = await callGroq(systemPrompt, message);
+    
+    res.json({ reply });
+  } catch (error) {
+    console.error('Chat error:', error.message);
+    res.status(500).json({
+      error: 'Failed to generate response',
+      reply: 'Sorry, I encountered an error. Please try again.'
+    });
+  }
+});
+
+// Explain code endpoint
+app.post('/api/explain', async (req, res) => {
+  try {
+    const { fileName, fileContent, repoContext } = req.body;
+    
+    if (!fileName || !fileContent) {
+      return res.status(400).json({ error: 'fileName and fileContent are required' });
+    }
+    
+    const systemPrompt = `You are a patient coding teacher explaining code to someone who has never coded before. Format your response exactly like this:
+
+WHAT IT DOES: (1 simple sentence)
+HOW IT WORKS: (3 bullet points in plain English)
+KEY CONCEPTS: (explain 2-3 technical terms used)
+WHY IT MATTERS: (1 sentence on why this file exists)
+
+Use simple analogies. Never use jargon without explaining it. Keep total under 200 words.`;
+    
+    const userMessage = `Explain this file from ${repoContext || 'a repository'}:
+
+File: ${fileName}
+Content:
+${fileContent.substring(0, 2000)}`;
+    
+    const explanation = await callGroq(systemPrompt, userMessage);
+    
+    res.json({ explanation });
+  } catch (error) {
+    console.error('Explain error:', error.message);
+    res.status(500).json({
+      error: 'Failed to generate explanation',
+      explanation: 'Sorry, I could not explain this file. Please try again.'
+    });
+  }
+});
+
+// Fetch commits endpoint
+app.get('/api/commits/:owner/:repo', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const commits = await fetchGitHubAPI(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`);
+    res.json({ commits });
+  } catch (error) {
+    console.error('Commits fetch error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch commits' });
+  }
+});
+
+// Fetch file tree endpoint
+app.get('/api/tree/:owner/:repo', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const tree = await fetchGitHubAPI(`https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`);
+    res.json({ tree: tree.tree || [] });
+  } catch (error) {
+    console.error('Tree fetch error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch file tree' });
+  }
+});
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
