@@ -725,54 +725,27 @@ function getFixRecommendation(flag) {
  * Calculate risk score based on repository characteristics
  */
 function calculateRiskScore(overview, contents, repoData, vulnerabilities) {
-  let score = 30; // Start at low-medium risk (more optimistic)
+  let score = 50; // Start at medium risk baseline
   const flags = [];
   
   // POSITIVE FACTORS - Reduce risk for quality indicators
   
-  // High star count = trusted by community
-  if (overview.stars > 10000) {
-    score -= 20; // Very popular
-  } else if (overview.stars > 1000) {
-    score -= 15; // Popular
-  } else if (overview.stars > 100) {
-    score -= 10; // Some community trust
-  }
-  
-  // Active maintenance
-  const lastUpdate = new Date(overview.lastUpdated);
-  const daysOld = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
-  if (daysOld < 30) {
-    score -= 10; // Recently updated
-  } else if (daysOld < 90) {
-    score -= 5; // Moderately active
-  } else if (daysOld > 365) {
-    flags.push({
-      severity: 'info',
-      message: `Repository not updated in ${Math.floor(daysOld / 365)} year(s) - may be stable or abandoned`
-    });
-    score += 10;
-  }
-  
-  // Good documentation
+  // Has README
   const hasReadme = Array.isArray(contents) &&
     contents.some(item => item.name.toLowerCase().startsWith('readme'));
   if (hasReadme) {
-    score -= 10;
+    score -= 15;
   } else {
     flags.push({ severity: 'info', message: 'No README documentation found' });
-    score += 8;
+    score += 15;
   }
   
-  // License present
+  // Has LICENSE
   if (overview.hasLicense) {
-    score -= 5;
-  } else {
-    flags.push({ severity: 'info', message: 'No license file - check usage rights' });
-    score += 5;
+    score -= 10;
   }
   
-  // Tests present
+  // Has tests folder
   const hasTests = Array.isArray(contents) &&
     contents.some(item =>
       item.name.toLowerCase().includes('test') ||
@@ -780,13 +753,71 @@ function calculateRiskScore(overview, contents, repoData, vulnerabilities) {
       item.name.toLowerCase().includes('__tests__')
     );
   if (hasTests) {
-    score -= 10;
-  } else {
-    flags.push({ severity: 'info', message: 'No test files detected - consider adding tests' });
-    score += 8;
+    score -= 15;
   }
   
-  // NEGATIVE FACTORS - Increase risk for actual issues
+  // Updated in last 30 days
+  const lastUpdate = new Date(overview.lastUpdated);
+  const daysOld = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysOld < 30) {
+    score -= 10;
+  }
+  
+  // Has package.json or requirements.txt
+  const hasDependencies = Array.isArray(contents) &&
+    contents.some(item =>
+      item.name === 'package.json' ||
+      item.name === 'requirements.txt'
+    );
+  if (hasDependencies) {
+    score -= 10;
+  }
+  
+  // More than 10 files
+  if (overview.fileCount > 10) {
+    score -= 10;
+  }
+  
+  // Has description
+  if (overview.description !== 'No description provided') {
+    score -= 5;
+  } else {
+    flags.push({ severity: 'info', message: 'No repository description' });
+    score += 10;
+  }
+  
+  // Stars over 1000
+  if (overview.stars > 1000) {
+    score -= 10;
+  }
+  
+  // NEGATIVE FACTORS - Increase risk for issues
+  
+  // Single file repo
+  if (overview.fileCount === 1) {
+    flags.push({ severity: 'info', message: 'Single file repository' });
+    score += 20;
+  }
+  
+  // Exposed .env file (CRITICAL)
+  const hasExposedEnv = Array.isArray(contents) &&
+    contents.some(item => item.name === '.env');
+  if (hasExposedEnv) {
+    flags.push({
+      severity: 'critical',
+      message: 'Exposed .env file detected - potential credential leak'
+    });
+    score += 30;
+  }
+  
+  // Not updated in 6 months
+  if (daysOld > 180) {
+    flags.push({
+      severity: 'info',
+      message: `Repository not updated in ${Math.floor(daysOld / 30)} months - may be stable or abandoned`
+    });
+    score += 15;
+  }
   
   // Add vulnerability findings to flags
   if (vulnerabilities) {
@@ -825,48 +856,7 @@ function calculateRiskScore(overview, contents, repoData, vulnerabilities) {
     });
   }
   
-  // Description missing (minor issue)
-  if (overview.description === 'No description provided') {
-    flags.push({ severity: 'info', message: 'No repository description' });
-    score += 5;
-  }
-  
-  // Single file repo (might be intentional)
-  if (overview.fileCount === 1) {
-    flags.push({ severity: 'info', message: 'Single file repository' });
-    score += 8;
-  } else if (overview.fileCount > 50) {
-    score -= 5; // Large, well-structured project
-  }
-  
-  // Check for dependency files
-  const hasDependencies = Array.isArray(contents) &&
-    contents.some(item =>
-      item.name === 'package.json' ||
-      item.name === 'requirements.txt' ||
-      item.name === 'Gemfile' ||
-      item.name === 'pom.xml' ||
-      item.name === 'build.gradle'
-    );
-  if (hasDependencies) {
-    score -= 10;
-  } else {
-    flags.push({ severity: 'info', message: 'No dependency manifest found' });
-    score += 10;
-  }
-  
-  // Check for exposed .env file (critical security issue)
-  const hasExposedEnv = Array.isArray(contents) &&
-    contents.some(item => item.name === '.env');
-  if (hasExposedEnv) {
-    flags.push({
-      severity: 'critical',
-      message: 'Exposed .env file detected - potential credential leak'
-    });
-    score += 30;
-  }
-  
-  // Ensure score is within bounds
+  // Ensure score is within bounds (0-100)
   score = Math.max(0, Math.min(100, score));
   
   // Add success message if no flags
