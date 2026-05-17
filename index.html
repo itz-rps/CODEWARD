@@ -855,6 +855,242 @@
             .risk-score-number {
                 font-size: 2.5rem;
             }
+
+        /* Chat Section */
+        .chat-messages {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #0a0a0f;
+            border-radius: 8px;
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+
+        .chat-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .chat-message.user .chat-avatar {
+            background: #1e1e2e;
+        }
+
+        .chat-bubble {
+            max-width: 70%;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            background: #1e1e2e;
+        }
+
+        .chat-message.user .chat-bubble {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        }
+
+        .chat-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .suggestion-chip {
+            padding: 0.5rem 1rem;
+            background: #1e1e2e;
+            border: 1px solid #2e2e3e;
+            border-radius: 20px;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-chip:hover {
+            background: #2e2e3e;
+            border-color: #6366f1;
+            color: #f8fafc;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: #1e1e2e;
+            border: 1px solid #2e2e3e;
+            border-radius: 8px;
+            color: #f8fafc;
+            font-size: 0.95rem;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .chat-send-btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chat-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        /* File Explainer */
+        .file-explainer-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .file-item {
+            padding: 1rem;
+            background: #1e1e2e;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: #2e2e3e;
+        }
+
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-explanation {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #0a0a0f;
+            border-left: 3px solid #6366f1;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        /* Commit Timeline */
+        .commit-timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .commit-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        .commit-item::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .commit-item.old::before {
+            background: #ef4444;
+        }
+
+        .commit-item.medium::before {
+            background: #f59e0b;
+        }
+
+        .commit-item::after {
+            content: '';
+            position: absolute;
+            left: -1.7rem;
+            top: 12px;
+            width: 2px;
+            height: calc(100% - 12px);
+            background: #1e1e2e;
+        }
+
+        .commit-item:last-child::after {
+            display: none;
+        }
+
+        .commit-message {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .commit-meta {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        /* File Tree */
+        .file-tree {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .tree-item {
+            padding: 0.25rem 0;
+            padding-left: 1rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .tree-item:hover {
+            background: #1e1e2e;
+        }
+
+        .tree-folder {
+            font-weight: 600;
+            color: #6366f1;
+        }
+
+        .tree-file {
+            color: #94a3b8;
+        }
+
+        .tree-file.danger {
+            color: #ef4444;
+        }
+
+        .tree-file.warning {
+            color: #f59e0b;
+        }
+
+        .tree-file.good {
+            color: #10b981;
+        }
         }
     </style>
 </head>
@@ -993,6 +1229,52 @@
             <div id="finalVerdictTitle" class="final-verdict-title"></div>
             <div id="finalVerdictSubtitle" class="final-verdict-subtitle"></div>
             <button id="analyzeAnotherBtn" class="analyze-another-btn">Analyze Another Repo</button>
+        
+        <!-- Chat with Bob Section -->
+        <div class="report-card">
+            <div class="card-header">
+                <div class="card-icon">💬</div>
+                <div class="card-title">Ask Bob About This Repo</div>
+            </div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-suggestions">
+                <button class="suggestion-chip" data-question="Is this safe to use?">Is this safe to use?</button>
+                <button class="suggestion-chip" data-question="What does the main file do?">What does the main file do?</button>
+                <button class="suggestion-chip" data-question="What should I fix first?">What should I fix first?</button>
+                <button class="suggestion-chip" data-question="Explain the folder structure">Explain the folder structure</button>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Ask Bob anything about this repo...">
+                <button id="chatSendBtn" class="chat-send-btn">Send</button>
+            </div>
+        </div>
+
+        <!-- Understand Your Code Section -->
+        <div class="report-card">
+            <div class="card-header">
+                <div class="card-icon">🎓</div>
+                <div class="card-title">Understand Your Code</div>
+            </div>
+            <div id="fileExplainerList" class="file-explainer-list"></div>
+        </div>
+
+        <!-- Commit History Timeline -->
+        <div class="report-card">
+            <div class="card-header">
+                <div class="card-icon">📅</div>
+                <div class="card-title">Recent Commits</div>
+            </div>
+            <div id="commitTimeline" class="commit-timeline"></div>
+        </div>
+
+        <!-- File Tree Explorer -->
+        <div class="report-card">
+            <div class="card-header">
+                <div class="card-icon">📁</div>
+                <div class="card-title">File Structure</div>
+            </div>
+            <div id="fileTree" class="file-tree"></div>
+        </div>
         </div>
     </section>
 
@@ -1645,6 +1927,210 @@
 
         // Console welcome message
         console.log('%cCodeward', 'font-size: 24px; font-weight: bold; color: #6366f1;');
+
+        // Global variable to store current repo context
+        let currentRepoContext = '';
+        let currentOwner = '';
+        let currentRepo = '';
+
+        // Chat functionality
+        function initializeChat(repoFullName) {
+            currentRepoContext = repoFullName;
+            const parts = repoFullName.split('/');
+            currentOwner = parts[0];
+            currentRepo = parts[1];
+            
+            const chatSendBtn = document.getElementById('chatSendBtn');
+            const chatInput = document.getElementById('chatInput');
+            
+            chatSendBtn.addEventListener('click', sendChatMessage);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendChatMessage();
+            });
+            
+            // Suggestion chips
+            document.querySelectorAll('.suggestion-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    chatInput.value = chip.dataset.question;
+                    sendChatMessage();
+                });
+            });
+        }
+
+        async function sendChatMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const chatMessages = document.getElementById('chatMessages');
+            const message = chatInput.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message
+            addChatMessage(message, 'user');
+            chatInput.value = '';
+            
+            // Add loading indicator
+            const loadingId = 'loading-' + Date.now();
+            addChatMessage('Thinking...', 'bot', loadingId);
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, repoContext: currentRepoContext })
+                });
+                
+                const data = await response.json();
+                
+                // Remove loading message
+                document.getElementById(loadingId)?.remove();
+                
+                // Add bot response
+                addChatMessage(data.reply, 'bot');
+            } catch (error) {
+                document.getElementById(loadingId)?.remove();
+                addChatMessage('Sorry, I encountered an error. Please try again.', 'bot');
+            }
+        }
+
+        function addChatMessage(text, sender, id = null) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}`;
+            if (id) messageDiv.id = id;
+            
+            messageDiv.innerHTML = `
+                <div class="chat-avatar">${sender === 'user' ? '👤' : '🤖'}</div>
+                <div class="chat-bubble">${text}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // File explainer functionality
+        async function loadFileExplainer(contents) {
+            const fileExplainerList = document.getElementById('fileExplainerList');
+            
+            const mainFiles = contents.filter(file => 
+                ['package.json', 'index.html', 'server.js', 'README.md', 'main.py', 'app.py'].includes(file.name)
+            ).slice(0, 5);
+            
+            mainFiles.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-name">📄 ${file.name}</div>
+                    <button class="suggestion-chip" onclick="explainFile('${file.name}', '${file.download_url}')">
+                        Explain This File ▶
+                    </button>
+                    <div id="explanation-${file.name}" class="file-explanation" style="display:none;"></div>
+                `;
+                fileExplainerList.appendChild(fileItem);
+            });
+        }
+
+        async function explainFile(fileName, downloadUrl) {
+            const explanationDiv = document.getElementById(`explanation-${fileName}`);
+            explanationDiv.style.display = 'block';
+            explanationDiv.textContent = 'Loading explanation...';
+            
+            try {
+                // Fetch file content
+                const fileResponse = await fetch(downloadUrl);
+                const fileContent = await fileResponse.text();
+                
+                // Get explanation
+                const response = await fetch('/api/explain', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        fileName, 
+                        fileContent, 
+                        repoContext: currentRepoContext 
+                    })
+                });
+                
+                const data = await response.json();
+                explanationDiv.textContent = data.explanation;
+            } catch (error) {
+                explanationDiv.textContent = 'Failed to load explanation. Please try again.';
+            }
+        }
+
+        // Commit timeline functionality
+        async function loadCommitTimeline() {
+            const commitTimeline = document.getElementById('commitTimeline');
+            
+            try {
+                const response = await fetch(`/api/commits/${currentOwner}/${currentRepo}`);
+                const data = await response.json();
+                
+                data.commits.forEach(commit => {
+                    const date = new Date(commit.commit.author.date);
+                    const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    let ageClass = 'old';
+                    if (daysAgo < 7) ageClass = '';
+                    else if (daysAgo < 30) ageClass = 'medium';
+                    
+                    const commitItem = document.createElement('div');
+                    commitItem.className = `commit-item ${ageClass}`;
+                    commitItem.innerHTML = `
+                        <div class="commit-message">${commit.commit.message.split('\n')[0]}</div>
+                        <div class="commit-meta">
+                            ${commit.commit.author.name} • ${daysAgo} days ago
+                        </div>
+                    `;
+                    commitTimeline.appendChild(commitItem);
+                });
+            } catch (error) {
+                commitTimeline.innerHTML = '<p style="color: #64748b;">Failed to load commits</p>';
+            }
+        }
+
+        // File tree functionality
+        async function loadFileTree() {
+            const fileTree = document.getElementById('fileTree');
+            
+            try {
+                const response = await fetch(`/api/tree/${currentOwner}/${currentRepo}`);
+                const data = await response.json();
+                
+                const tree = data.tree.slice(0, 50); // Limit to 50 files
+                
+                tree.forEach(item => {
+                    const isFolder = item.type === 'tree';
+                    const fileName = item.path.split('/').pop();
+                    
+                    let fileClass = 'tree-file';
+                    if (isFolder) fileClass = 'tree-folder';
+                    else if (fileName.includes('.env') || fileName.includes('secret')) fileClass = 'tree-file danger';
+                    else if (fileName.includes('TODO') || fileName.includes('FIXME')) fileClass = 'tree-file warning';
+                    else if (fileName.includes('README') || fileName.includes('LICENSE')) fileClass = 'tree-file good';
+                    
+                    const icon = isFolder ? '📁' : '📄';
+                    
+                    const treeItem = document.createElement('div');
+                    treeItem.className = 'tree-item';
+                    treeItem.innerHTML = `<span class="${fileClass}">${icon} ${item.path}</span>`;
+                    fileTree.appendChild(treeItem);
+                });
+            } catch (error) {
+                fileTree.innerHTML = '<p style="color: #64748b;">Failed to load file tree</p>';
+            }
+        }
+
+        // Update displayReport to initialize new features
+        const originalDisplayReport = displayReport;
+        displayReport = function(data) {
+            originalDisplayReport(data);
+            
+            // Initialize new features
+            initializeChat(data.overview.fullName);
+            loadFileExplainer(data.overview.contents || []);
+            loadCommitTimeline();
+            loadFileTree();
+        };
         console.log('%cKnow your code before you ship it', 'font-size: 14px; color: #94a3b8;');
     </script>
 </body>
