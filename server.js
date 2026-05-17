@@ -240,30 +240,52 @@ async function checkVulnerabilities(owner, repo, contents, languages) {
  * Check for sensitive files in repository
  */
 function checkSensitiveFiles(tree) {
-  const sensitivePatterns = [
-    '.env', '.env.local', '.env.production', '.env.development',
-    'id_rsa', 'id_rsa.pub', '.pem', '.key', '.p12', '.pfx',
-    'secrets.json', 'credentials.json', 'config.prod.js', 'config.production.js',
-    'admin-password', 'backup.sql', 'database.sql', 'dump.sql',
-    '.htpasswd', 'shadow', 'passwd', 'private-key',
-    'aws-credentials', '.aws/credentials', 'gcp-key.json'
-  ];
-
   const found = [];
   
   tree.forEach(item => {
     const path = item.path.toLowerCase();
     const filename = path.split('/').pop();
     
-    sensitivePatterns.forEach(pattern => {
-      if (filename.includes(pattern.toLowerCase()) || path.includes(pattern.toLowerCase())) {
-        found.push({
-          file: item.path,
-          severity: 'critical',
-          message: `Exposed sensitive file: ${item.path}`
-        });
-      }
-    });
+    // Skip test directories and test fixtures
+    if (path.includes('__tests__') || path.includes('/test/') || path.includes('/tests/')) {
+      return;
+    }
+    
+    // Skip .js and .md files (including test fixtures)
+    if (filename.endsWith('.js') || filename.endsWith('.md')) {
+      return;
+    }
+    
+    let isSensitive = false;
+    let message = '';
+    
+    // Check for exact filename matches
+    if (filename === '.env' || filename === '.env.local' || filename === '.env.production') {
+      isSensitive = true;
+      message = `Exposed environment file: ${item.path}`;
+    } else if (filename === 'id_rsa' || filename === 'id_rsa.pub') {
+      isSensitive = true;
+      message = `Exposed SSH key: ${item.path}`;
+    } else if (filename === 'secrets.json' || filename === 'credentials.json') {
+      isSensitive = true;
+      message = `Exposed credentials file: ${item.path}`;
+    } else if (filename === 'database.sql' || filename === 'backup.sql') {
+      isSensitive = true;
+      message = `Exposed database file: ${item.path}`;
+    }
+    // Check for file extensions (private keys only)
+    else if (filename.endsWith('.pem') || filename.endsWith('.key')) {
+      isSensitive = true;
+      message = `Exposed private key: ${item.path}`;
+    }
+    
+    if (isSensitive) {
+      found.push({
+        file: item.path,
+        severity: 'critical',
+        message: message
+      });
+    }
   });
 
   return found;
@@ -725,7 +747,7 @@ function getFixRecommendation(flag) {
  * Calculate risk score based on repository characteristics
  */
 function calculateRiskScore(overview, contents, repoData, vulnerabilities) {
-  let score = 50; // Start at medium risk baseline
+  let score = 30; // Start at low-medium risk baseline
   const flags = [];
   
   // POSITIVE FACTORS - Reduce risk for quality indicators
