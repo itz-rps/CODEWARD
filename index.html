@@ -2120,14 +2120,36 @@
             }
         }
 
-        // Update displayReport to initialize new features
+        // Extend displayReport to initialize new features
         const originalDisplayReport = displayReport;
-        displayReport = function(data) {
+        displayReport = async function(data) {
             originalDisplayReport(data);
+            
+            // Extract owner and repo from fullName
+            const parts = data.overview.fullName.split('/');
+            currentOwner = parts[0];
+            currentRepo = parts[1];
+            currentRepoContext = data.overview.fullName;
             
             // Initialize new features
             initializeChat(data.overview.fullName);
-            loadFileExplainer(data.overview.contents || []);
+            
+            // Fetch contents for file explainer
+            try {
+                const contentsResponse = await fetch(`https://api.github.com/repos/${currentOwner}/${currentRepo}/contents`, {
+                    headers: {
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Codeward-App'
+                    }
+                });
+                if (contentsResponse.ok) {
+                    const contents = await contentsResponse.json();
+                    loadFileExplainer(contents);
+                }
+            } catch (error) {
+                console.error('Failed to load contents:', error);
+            }
+            
             loadCommitTimeline();
             loadFileTree();
         };

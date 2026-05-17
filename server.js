@@ -725,97 +725,118 @@ function getFixRecommendation(flag) {
  * Calculate risk score based on repository characteristics
  */
 function calculateRiskScore(overview, contents, repoData, vulnerabilities) {
-  let score = 50; // Start at medium risk
+  let score = 30; // Start at low-medium risk (more optimistic)
   const flags = [];
+  
+  // POSITIVE FACTORS - Reduce risk for quality indicators
+  
+  // High star count = trusted by community
+  if (overview.stars > 10000) {
+    score -= 20; // Very popular
+  } else if (overview.stars > 1000) {
+    score -= 15; // Popular
+  } else if (overview.stars > 100) {
+    score -= 10; // Some community trust
+  }
+  
+  // Active maintenance
+  const lastUpdate = new Date(overview.lastUpdated);
+  const daysOld = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysOld < 30) {
+    score -= 10; // Recently updated
+  } else if (daysOld < 90) {
+    score -= 5; // Moderately active
+  } else if (daysOld > 365) {
+    flags.push({
+      severity: 'info',
+      message: `Repository not updated in ${Math.floor(daysOld / 365)} year(s) - may be stable or abandoned`
+    });
+    score += 10;
+  }
+  
+  // Good documentation
+  const hasReadme = Array.isArray(contents) &&
+    contents.some(item => item.name.toLowerCase().startsWith('readme'));
+  if (hasReadme) {
+    score -= 10;
+  } else {
+    flags.push({ severity: 'info', message: 'No README documentation found' });
+    score += 8;
+  }
+  
+  // License present
+  if (overview.hasLicense) {
+    score -= 5;
+  } else {
+    flags.push({ severity: 'info', message: 'No license file - check usage rights' });
+    score += 5;
+  }
+  
+  // Tests present
+  const hasTests = Array.isArray(contents) &&
+    contents.some(item =>
+      item.name.toLowerCase().includes('test') ||
+      item.name.toLowerCase().includes('spec') ||
+      item.name.toLowerCase().includes('__tests__')
+    );
+  if (hasTests) {
+    score -= 10;
+  } else {
+    flags.push({ severity: 'info', message: 'No test files detected - consider adding tests' });
+    score += 8;
+  }
+  
+  // NEGATIVE FACTORS - Increase risk for actual issues
   
   // Add vulnerability findings to flags
   if (vulnerabilities) {
     // Sensitive files (CRITICAL)
     vulnerabilities.sensitiveFiles.forEach(vuln => {
       flags.push(vuln);
-      score += 25; // Major penalty for exposed secrets
+      score += 30; // Major penalty for exposed secrets
     });
     
-    // NPM vulnerabilities
+    // NPM vulnerabilities (only critical ones matter)
     vulnerabilities.npm.forEach(vuln => {
-      flags.push(vuln);
-      if (vuln.severity === 'critical') score += 20;
-      else if (vuln.severity === 'warning') score += 10;
+      if (vuln.severity === 'critical') {
+        flags.push(vuln);
+        score += 15;
+      } else if (vuln.severity === 'warning') {
+        flags.push(vuln);
+        score += 5;
+      }
     });
     
     // PyPI vulnerabilities
     vulnerabilities.pypi.forEach(vuln => {
-      flags.push(vuln);
-      if (vuln.severity === 'warning') score += 10;
-      else if (vuln.severity === 'info') score += 5;
+      if (vuln.severity === 'warning') {
+        flags.push(vuln);
+        score += 5;
+      }
     });
     
-    // GitHub advisories
+    // GitHub advisories (informational only)
     vulnerabilities.advisories.forEach(advisory => {
       flags.push({
-        severity: 'warning',
-        message: advisory.message
+        severity: 'info',
+        message: advisory.message + ' (ecosystem-wide, not specific to this repo)'
       });
-      score += 15;
+      score += 3; // Minimal penalty
     });
   }
   
-  // Check for README
-  const hasReadme = Array.isArray(contents) &&
-    contents.some(item => item.name.toLowerCase().startsWith('readme'));
-  if (hasReadme) {
-    score -= 10;
-  } else {
-    flags.push({ severity: 'warning', message: 'No README documentation found' });
-    score += 10;
-  }
-  
-  // Check for LICENSE
-  if (overview.hasLicense) {
-    score -= 5;
-  } else {
-    flags.push({ severity: 'info', message: 'No license file found' });
+  // Description missing (minor issue)
+  if (overview.description === 'No description provided') {
+    flags.push({ severity: 'info', message: 'No repository description' });
     score += 5;
   }
   
-  // Check for tests
-  const hasTests = Array.isArray(contents) &&
-    contents.some(item =>
-      item.name.toLowerCase().includes('test') ||
-      item.name.toLowerCase().includes('spec')
-    );
-  if (hasTests) {
-    score -= 15;
-  } else {
-    flags.push({ severity: 'warning', message: 'No test files detected' });
-    score += 15;
-  }
-  
-  // Check last update date
-  const lastUpdate = new Date(overview.lastUpdated);
-  const monthsOld = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24 * 30);
-  if (monthsOld > 6) {
-    flags.push({
-      severity: 'warning',
-      message: `Repository not updated in ${Math.floor(monthsOld)} months`
-    });
-    score += 20;
-  } else {
-    score -= 10;
-  }
-  
-  // Check for description
-  if (overview.description === 'No description provided') {
-    flags.push({ severity: 'info', message: 'No repository description' });
-    score += 10;
-  }
-  
-  // Check file count
+  // Single file repo (might be intentional)
   if (overview.fileCount === 1) {
-    flags.push({ severity: 'warning', message: 'Single file repository - limited scope' });
-    score += 15;
-  } else if (overview.fileCount > 20) {
-    score -= 10;
+    flags.push({ severity: 'info', message: 'Single file repository' });
+    score += 8;
+  } else if (overview.fileCount > 50) {
+    score -= 5; // Large, well-structured project
   }
   
   // Check for dependency files
